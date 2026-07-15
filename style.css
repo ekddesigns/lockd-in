@@ -18,7 +18,7 @@
     --status-success: #10b981;
     --status-fail: #ef4444;
     
-    /* Base kinetic wheel slot height metrics */
+    /* Desktop rolling digit row height (JS reads this sync) */
     --row-height: 80px;
 }
 
@@ -291,6 +291,7 @@ body.pip-mode {
     display: flex; 
     justify-content: center; 
     align-items: center; 
+    --row-height: 60px; /* Force-overrides PiP wheel boundaries strictly */
 }
 body.pip-mode .widget-container { 
     width: 100vw; 
@@ -355,7 +356,6 @@ body.pip-mode .widget-container {
 
 @media (max-width: 420px) {
     :root {
-        /* Scale down slot sizes dynamically inside small viewports or active PiP screens */
         --row-height: 60px;
     }
     

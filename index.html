@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lockd In — Focus Workspace</title>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body class="dark-mode">
+
+    <div class="theme-toggle" id="themeToggle" title="Toggle Theme">
+        <svg id="themeIcon" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>
+    </div>
+
+    <main class="app-workspace">
+        
+        <section class="upper-control-station">
+            <div class="widget-container" id="widget">
+                <div class="trophy-celebration-overlay" id="widgetCelebrationOverlay">🏆</div>
+
+                <div class="widget-header">
+                    <span class="app-logo">Lockd In</span>
+                    <button id="pipBtn" class="icon-btn" title="Pop out widget into floating desktop view">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="8" y="8" width="12" height="10" rx="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg>
+                    </button>
+                </div>
+                
+                <div class="state-indicator" id="stateIndicator">Lockd in</div>
+                
+                <div class="timer-display">
+                    <div class="time-col">
+                        <div class="digit-wheel" id="hoursWheel"></div>
+                    </div>
+                    <span class="colon">:</span>
+                    <div class="time-col">
+                        <div class="digit-wheel" id="minsWheel"></div>
+                    </div>
+                    <span class="colon">:</span>
+                    <div class="time-col">
+                        <div class="digit-wheel" id="secsWheel"></div>
+                    </div>
+                </div>
+                
+                <div class="controls">
+                    <button id="startBtn" class="btn btn-primary">Lock In</button>
+                    <button id="nextBtn" class="btn btn-secondary">Next</button>
+                </div>
+
+                <div class="widget-footer">
+                    Lockd In by <a href="https://t.me/ekddesign" target="_blank">@ekddesigns</a>
+                </div>
+            </div>
+
+            <div class="control-config-panel">
+                <div class="panel-section">
+                    <h3>Lock In Target</h3>
+                    <div class="config-grid" id="focusConfig">
+                        <div class="config-card active" data-time="15">
+                            <span class="card-time">15</span><span class="card-unit">mins</span>
+                        </div>
+                        <div class="config-card" data-time="30">
+                            <span class="card-time">30</span><span class="card-unit">mins</span>
+                        </div>
+                        <div class="config-card" data-time="45">
+                            <span class="card-time">45</span><span class="card-unit">mins</span>
+                        </div>
+                        <div class="config-card" data-time="60">
+                            <span class="card-time">60</span><span class="card-unit">mins</span>
+                        </div>
+                        <div class="config-card" data-time="90">
+                            <span class="card-time">90</span><span class="card-unit">mins</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="panel-section">
+                    <h3>Interval Rest</h3>
+                    <div class="config-grid" id="restConfig">
+                        <div class="config-card" data-time="5">
+                            <span class="card-time">05</span><span class="card-unit">mins</span>
+                        </div>
+                        <div class="config-card" data-time="15">
+                            <span class="card-time">15</span><span class="card-unit">mins</span>
+                        </div>
+                        <div class="config-card" data-time="30">
+                            <span class="card-time">30</span><span class="card-unit">mins</span>
+                        </div>
+                        <div class="config-card" data-time="60">
+                            <span class="card-time">01</span><span class="card-unit">hour</span>
+                        </div>
+                        <div class="config-card active" data-time="180">
+                            <span class="card-time">03</span><span class="card-unit">hours</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="panel-section cabinet-section">
+                    <h3>Milestones achieved</h3>
+                    <div class="trophy-cabinet" id="trophyCabinet">
+                        <div class="empty-cabinet-text">No milestones locked in yet. Complete a session!</div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section class="lower-dashboard-station">
+            
+            <div class="panel-section chart-section">
+                <div class="section-header-row">
+                    <h3>Productivity Metric Charts</h3>
+                    <select id="chartTimelineSelector" class="dropdown-select">
+                        <option value="daily">Daily View</option>
+                        <option value="weekly">Weekly View</option>
+                        <option value="monthly">Monthly View</option>
+                    </select>
+                </div>
+                <div class="chart-wrapper">
+                    <div class="chart-container" id="barChartContainer">
+                        </div>
+                </div>
+            </div>
+
+            <div class="panel-section terminal-section">
+                <h3>Session Activity Terminal Log</h3>
+                <div class="table-scroll-frame">
+                    <table class="log-table">
+                        <thead>
+                            <tr>
+                                <th>Timestamp</th>
+                                <th>Interval Mode</th>
+                                <th>Target Duration</th>
+                                <th>Cycle Status</th>
+                            </tr>
+                        </thead>
+                        <tbody id="terminalLogBody">
+                            <tr class="empty-row-notice">
+                                <td colspan="4">No historical telemetry compiled in terminal stack yet.</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div class="panel-section visitor-counter-section">
+                <h3>Global Platform Activity</h3>
+                <div class="visitor-display-box">
+                    <div class="visitor-metric">
+                        <span class="visitor-count-number" id="globalVisitorCount">001</span>
+                        <span class="visitor-count-label">Unique Global Builders Joined</span>
+                    </div>
+                    <div class="live-pulse-wrapper">
+                        <span class="pulse-dot"></span>
+                        <span class="pulse-text">Syncing Network Nodes Live</span>
+                    </div>
+                </div>
+            </div>
+
+        </section>
+
+    </main>
+
+    <audio id="focusEndSound" src="https://assets.mixkit.co/active_storage/sfx/2568/2568-84.wav" preload="auto"></audio>
+    <audio id="restEndSound" src="https://assets.mixkit.co/active_storage/sfx/911/911-84.wav" preload="auto"></audio>
+
+    <script src="app.js"></script>
+</body>
+</html>

@@ -1,0 +1,245 @@
+/* --- Global Core Variables & Design Resets --- */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    font-family: 'Poppins', sans-serif;
+}
+
+:root {
+    --bg-color: #050505;
+    --card-bg: #0d0d0d;
+    --border-color: #1a1a1a;
+    --text-main: #ffffff;
+    --text-muted: #666666;
+    --accent-color: #ffffff;
+    --btn-secondary-bg: #141414;
+    --active-selection: #262626;
+    --status-success: #10b981;
+    --status-fail: #ef4444;
+}
+
+.light-mode {
+    --bg-color: #fafafa;
+    --card-bg: #ffffff;
+    --border-color: #e4e4e7;
+    --text-main: #09090b;
+    --text-muted: #a1a1aa;
+    --accent-color: #09090b;
+    --btn-secondary-bg: #f4f4f5;
+    --active-selection: #e4e4e7;
+    --status-success: #059669;
+    --status-fail: #dc2626;
+}
+
+body {
+    background-color: var(--bg-color);
+    color: var(--text-main);
+    display: flex;
+    justify-content: center;
+    min-height: 100vh;
+    overflow-x: hidden;
+    overflow-y: scroll;
+    transition: background-color 0.3s ease, color 0.3s ease;
+    padding: 60px 20px;
+}
+
+.theme-toggle {
+    position: fixed;
+    top: 24px;
+    right: 24px;
+    cursor: pointer;
+    color: var(--text-main);
+    padding: 8px;
+    border-radius: 50%;
+    z-index: 100;
+}
+
+/* --- Main Vertical Layout Pipeline --- */
+.app-workspace {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 32px;
+    width: 100%;
+    max-width: 850px;
+}
+
+/* --- Top Control Area Row Configuration --- */
+.upper-control-station {
+    display: flex;
+    align-items: stretch;
+    justify-content: center;
+    gap: 32px;
+    width: 100%;
+}
+
+.control-config-panel {
+    flex: 1.2;
+    background-color: var(--card-bg);
+    border: 1px solid var(--border-color);
+    border-radius: 24px;
+    padding: 28px;
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.1);
+}
+
+/* --- Bottom Scroll Area Configuration --- */
+.lower-dashboard-station {
+    width: 100%;
+    background-color: var(--card-bg);
+    border: 1px solid var(--border-color);
+    border-radius: 32px;
+    padding: 36px;
+    display: flex;
+    flex-direction: column;
+    gap: 32px;
+    box-shadow: 0 15px 45px rgba(0, 0, 0, 0.15);
+}
+
+.panel-section h3 {
+    font-size: 0.8rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--text-muted);
+    margin-bottom: 12px;
+}
+
+/* --- Time Config Cards Architecture --- */
+.config-grid {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+.config-card {
+    flex: 1;
+    min-width: 70px;
+    background-color: var(--btn-secondary-bg);
+    border: 1px solid var(--border-color);
+    border-radius: 14px;
+    padding: 12px 6px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    position: relative;
+    transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.config-card:hover {
+    border-color: var(--text-muted);
+    transform: translateY(-2px);
+}
+
+.card-time { font-size: 1.15rem; font-weight: 700; color: var(--text-main); line-height: 1.2; }
+.card-unit { font-size: 0.65rem; color: var(--text-muted); font-weight: 500; text-transform: uppercase; letter-spacing: 0.02em; }
+
+.config-card.active {
+    background-color: var(--card-bg);
+    border: 2px solid var(--text-main);
+}
+.config-card.active::after {
+    content: ''; position: absolute; bottom: 6px; width: 12px; height: 2px; background-color: var(--text-main); border-radius: 2px;
+}
+
+/* --- Real-time Visitor Counter Styling --- */
+.visitor-display-box {
+    background-color: var(--btn-secondary-bg);
+    border: 1px solid var(--border-color);
+    border-radius: 16px;
+    padding: 16px 20px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.visitor-metric { display: flex; flex-direction: column; gap: 2px; }
+.visitor-count-number { font-size: 1.6rem; font-weight: 700; color: var(--text-main); letter-spacing: -0.02em; }
+.visitor-count-label { font-size: 0.72rem; color: var(--text-muted); font-weight: 500; }
+
+.live-pulse-wrapper { display: flex; align-items: center; gap: 8px; }
+.pulse-dot {
+    width: 8px; height: 8px; background-color: #10b981; border-radius: 50%;
+    position: relative; animation: pulseRadar 2s infinite ease-in-out;
+}
+.pulse-text { font-size: 0.68rem; color: var(--text-muted); font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; }
+
+@keyframes pulseRadar {
+    0% { transform: scale(0.9); opacity: 1; box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7); }
+    70% { transform: scale(1.1); opacity: 1; box-shadow: 0 0 0 6px rgba(16, 185, 129, 0); }
+    100% { transform: scale(0.9); opacity: 0; box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
+}
+
+/* --- Charts & Dropdown Views --- */
+.section-header-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px; }
+.dropdown-select {
+    background-color: var(--btn-secondary-bg); border: 1px solid var(--border-color); color: var(--text-main);
+    padding: 6px 14px; border-radius: 8px; font-size: 0.78rem; font-weight: 500; outline: none; cursor: pointer;
+}
+
+.chart-wrapper { background-color: var(--btn-secondary-bg); border: 1px solid var(--border-color); border-radius: 14px; padding: 18px 24px; margin-top: 8px; }
+.chart-container { display: flex; align-items: flex-end; justify-content: space-between; height: 130px; gap: 16px; }
+.chart-bar-column { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 8px; height: 100%; justify-content: flex-end; }
+.chart-bar-fill { width: 100%; background-color: var(--text-main); border-radius: 4px 4px 0 0; min-height: 2px; opacity: 0.85; transition: height 0.5s cubic-bezier(0.4, 0, 0.2, 1); }
+.chart-bar-fill.active-bar { opacity: 1; box-shadow: 0 0 12px rgba(255, 255, 255, 0.2); }
+.chart-bar-label { font-size: 0.65rem; color: var(--text-muted); font-weight: 500; text-transform: uppercase; }
+
+/* --- Tabular Terminal Log Components --- */
+.table-scroll-frame { max-height: 200px; overflow-y: auto; border: 1px solid var(--border-color); border-radius: 12px; background-color: var(--btn-secondary-bg); }
+.log-table { width: 100%; border-collapse: collapse; text-align: left; font-size: 0.78rem; }
+.log-table th, .log-table td { padding: 12px 16px; border-bottom: 1px solid var(--border-color); }
+.log-table th { background-color: var(--card-bg); color: var(--text-muted); font-weight: 600; position: sticky; top: 0; font-size: 0.72rem; text-transform: uppercase; }
+.log-table tr:last-child td { border-bottom: none; }
+.empty-row-notice { text-align: center; color: var(--text-muted); }
+.status-tag { font-weight: 600; font-size: 0.72rem; text-transform: uppercase; }
+.status-tag.complete { color: var(--status-success); }
+.status-tag.interrupted { color: var(--status-fail); }
+
+/* --- Trophy Milestone Cabinets --- */
+.trophy-cabinet { display: flex; gap: 8px; flex-wrap: wrap; min-height: 48px; align-items: center; background-color: var(--btn-secondary-bg); padding: 12px 16px; border-radius: 12px; border: 1px solid var(--border-color); }
+.empty-cabinet-text { font-size: 0.75rem; color: var(--text-muted); }
+.trophy-emoji { font-size: 1.4rem; }
+
+/* --- Left Side: Main Core Widget Styling --- */
+.widget-container {
+    width: 380px; padding: 36px; background-color: var(--card-bg); border: 3px solid var(--text-main); border-radius: 36px; box-shadow: 0 25px 50px rgba(0, 0, 0, 0.3); text-align: center; display: flex; flex-direction: column; justify-content: center; position: relative; overflow: hidden;
+}
+
+/* --- Immersive Pop Trophy Celebration Overlays --- */
+.trophy-celebration-overlay {
+    position: absolute; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0, 0, 0, 0.85); z-index: 50; display: flex; justify-content: center; align-items: center; font-size: 6rem; opacity: 0; pointer-events: none; transform: scale(0.4); transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+.light-mode .trophy-celebration-overlay { background-color: rgba(255, 255, 255, 0.92); }
+.trophy-celebration-overlay.celebrate-active { opacity: 1; transform: scale(1); pointer-events: auto; }
+
+.widget-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; }
+.app-logo { font-size: 1.25rem; font-weight: 700; letter-spacing: -0.03em; color: var(--text-main); }
+.icon-btn { background: none; border: none; color: var(--text-muted); cursor: pointer; padding: 6px; display: flex; align-items: center; border-radius: 8px; }
+.icon-btn:hover { color: var(--text-main); background: var(--btn-secondary-bg); }
+.state-indicator { font-size: 0.8rem; font-weight: 600; letter-spacing: 0.12em; text-transform: uppercase; color: var(--text-muted); margin-bottom: 12px; }
+
+/* --- Mechanical Rolling Wheel System --- */
+.timer-display { display: flex; justify-content: center; align-items: center; gap: 4px; font-size: 3.2rem; font-weight: 600; letter-spacing: -0.02em; margin-bottom: 32px; color: var(--text-main); height: 80px; overflow: hidden; }
+.time-col { width: 72px; height: 80px; position: relative; }
+.digit-wheel { position: absolute; width: 100%; left: 0; top: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; transition: transform 0.45s cubic-bezier(0.23, 1, 0.32, 1); }
+.digit-wheel div { height: 80px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+.colon { height: 80px; display: flex; align-items: center; padding-bottom: 8px; color: var(--text-main); }
+
+/* --- Controls Buttons --- */
+.controls { display: flex; gap: 12px; margin-bottom: 24px; }
+.btn { flex: 1; padding: 14px; border: none; border-radius: 14px; font-size: 0.9rem; font-weight: 600; cursor: pointer; }
+.btn-primary { background-color: var(--accent-color); color: var(--bg-color); }
+.btn-secondary { background-color: var(--btn-secondary-bg); color: var(--text-main); border: 1px solid var(--border-color); }
+.btn:hover { opacity: 0.9; transform: translateY(-1px); }
+.widget-footer { font-size: 0.68rem; color: var(--text-muted); letter-spacing: 0.02em; }
+.widget-footer a { color: var(--text-main); text-decoration: none; font-weight: 600; }
+.widget-footer a:hover { text-decoration: underline; }
+
+/* --- Picture in Picture Environment Isolation Window Context overrides --- */
+body.pip-mode { background-color: var(--bg-color); height: 100vh; width: 100vw; margin: 0; padding: 0; display: flex; justify-content: center; align-items: center; }
+body.pip-mode .widget-container { width: 100vw; height: 100vh; border-radius: 0px; border: none; box-shadow: none; padding: 20px; }

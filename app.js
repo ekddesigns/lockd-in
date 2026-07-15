@@ -4,15 +4,15 @@ let isRunning = localStorage.getItem('lockdIn_isRunning') === 'true';
 let currentMode = localStorage.getItem('lockdIn_currentMode') || 'focus'; 
 let isLightMode = localStorage.getItem('lockdIn_lightMode') === 'true';
 
-let selectedFocusDuration = parseInt(localStorage.getItem('lockdIn_selectedFocus')) || 15 * 60;
-let selectedRestDuration = parseInt(localStorage.getItem('lockdIn_selectedRest')) || 180 * 60;
+// Default Fallbacks: 3 Hours focus (180 mins) & 5 Mins rest (5 mins)
+let selectedFocusDuration = parseInt(localStorage.getItem('lockdIn_selectedFocus')) || 180 * 60; 
+let selectedRestDuration = parseInt(localStorage.getItem('lockdIn_selectedRest')) || 5 * 60;
 let timeLeft = parseInt(localStorage.getItem('lockdIn_timeLeft')) || selectedFocusDuration;
 let currentSessionTotalTarget = parseInt(localStorage.getItem('lockdIn_totalTarget')) || selectedFocusDuration;
 
 let totalTrophies = parseInt(localStorage.getItem('lockdIn_trophyCount')) || 0;
 let historicalLogsStack = JSON.parse(localStorage.getItem('lockdIn_terminalLogs')) || [];
 
-// Wiped clean - maps genuine history from zero boundaries
 const metricsDatabase = JSON.parse(localStorage.getItem('lockdIn_metricsDatabase')) || {
     daily: [
         { label: 'Sun', mins: 0 }, { label: 'Mon', mins: 0 }, { label: 'Tue', mins: 0 },
@@ -31,6 +31,7 @@ const metricsDatabase = JSON.parse(localStorage.getItem('lockdIn_metricsDatabase
 // --- DOM Cache Elements ---
 const startBtn = document.getElementById('startBtn');
 const nextBtn = document.getElementById('nextBtn');
+const resetBtn = document.getElementById('resetBtn');
 const pipBtn = document.getElementById('pipBtn');
 const stateIndicator = document.getElementById('stateIndicator');
 const themeToggle = document.getElementById('themeToggle');
@@ -43,11 +44,12 @@ const chartTimelineSelector = document.getElementById('chartTimelineSelector');
 const widgetCelebrationOverlay = document.getElementById('widgetCelebrationOverlay');
 const globalVisitorCount = document.getElementById('globalVisitorCount');
 
-// Audio nodes
+let resetClickCount = 0;
+let resetClickTimeout;
+
 const focusEndSound = document.getElementById('focusEndSound');
 const restEndSound = document.getElementById('restEndSound');
 
-// Wheels
 const hoursWheel = document.getElementById('hoursWheel');
 const minsWheel = document.getElementById('minsWheel');
 const secsWheel = document.getElementById('secsWheel');
@@ -78,17 +80,11 @@ function initializeWheels() {
     secsWheel.innerHTML = minsSecsHTML;
 }
 
-// BULLETPROOF RELIABLE HEIGHT CALCULATION:
-// Explicitly checks the layout document context to return exactly 60px inside PiP / Mobile and 80px on standard desktop
 function getRowHeight() {
     const activeDocument = widget.ownerDocument || document;
-    
-    // 1. Check if the element is currently sitting in the popped out PiP document window
     if (activeDocument !== document) {
         return 60; 
     }
-    
-    // 2. Fall back to reading viewport properties on standard document
     const isMobileLayout = window.matchMedia("(max-width: 768px)").matches;
     return isMobileLayout ? 60 : 80;
 }
@@ -110,16 +106,50 @@ function updateRollingDisplay() {
     document.title = `(${hStr}:${mStr}:${sStr}) Lockd In`;
 }
 
-// --- Unique Network Visitor Verification Engine ---
-function processUniquePlatformVisits() {
-    let hasVisitedBeforeToken = localStorage.getItem('lockdIn_returningUserToken');
-
-    if (!hasVisitedBeforeToken) {
-        localStorage.setItem('lockdIn_returningUserToken', 'true');
-        globalVisitorCount.textContent = "001";
-    } else {
-        globalVisitorCount.textContent = "001";
+// --- TRUE GLOBAL CLOUD VISITOR COUNTER ENGINE ---
+async function processUniquePlatformVisits() {
+    let hasBeenCounted = localStorage.getItem('lockdIn_countedOnPlatform');
+    const workspaceKey = "ekddesigns_lockdin_workspace";
+    const metricKey = "unique_builders_joined";
+    
+    try {
+        let response;
+        if (!hasBeenCounted) {
+            response = await fetch(`https://api.counterapi.dev/v1/${workspaceKey}/${metricKey}/up`);
+            localStorage.setItem('lockdIn_countedOnPlatform', 'true');
+        } else {
+            response = await fetch(`https://api.counterapi.dev/v1/${workspaceKey}/${metricKey}`);
+        }
+        
+        const data = await response.json();
+        const globalTotal = data.count || 1;
+        
+        globalVisitorCount.textContent = globalTotal.toString().padStart(3, '0');
+        
+        if (globalTotal >= 100) {
+            triggerMegaMilestoneCelebration(globalTotal);
+        }
+        
+    } catch (error) {
+        console.warn("Global database fetch error, processing local bypass context:", error);
+        let fallbackSeed = parseInt(localStorage.getItem('lockdIn_networkTrafficSeed')) || 1;
+        if (!hasBeenCounted) {
+            fallbackSeed++;
+            localStorage.setItem('lockdIn_networkTrafficSeed', fallbackSeed);
+            localStorage.setItem('lockdIn_countedOnPlatform', 'true');
+        }
+        globalVisitorCount.textContent = fallbackSeed.toString().padStart(3, '0');
     }
+}
+
+function triggerMegaMilestoneCelebration(count) {
+    widgetCelebrationOverlay.innerHTML = `🎉<div style="font-size: 1.2rem; font-family:'Space Grotesk'; margin-top:10px;">${count} BUILDERS JOINED!</div>`;
+    widgetCelebrationOverlay.classList.add('celebrate-active');
+    
+    setTimeout(() => {
+        widgetCelebrationOverlay.classList.remove('celebrate-active');
+        widgetCelebrationOverlay.innerHTML = `🏆`; 
+    }, 5000);
 }
 
 // --- Persistent Tabular Logging System ---
@@ -134,48 +164,61 @@ function commitLogToTerminal(type, targetDurationSeconds, completedOption, isPre
 }
 
 function renderLogsUI() {
-    if (historicalLogsStack.length > 0) {
-        const placeholder = document.querySelector('.empty-row-notice');
-        if (placeholder) placeholder.remove();
-        
-        terminalLogBody.innerHTML = '';
-        historicalLogsStack.forEach(log => {
-            const durationMinutes = Math.round(log.targetDurationSeconds / 60);
-            const modeLabel = log.type === 'focus' ? 'Lock In Session' : 'Rest Break';
-            const tagClass = log.completedOption ? 'complete' : 'interrupted';
-            const tagLabel = log.completedOption ? 'Completed' : 'Interrupted';
+    const activeDocument = widget.ownerDocument || document;
+    const logBody = activeDocument.getElementById('terminalLogBody') || terminalLogBody;
+    
+    if (logBody) {
+        if (historicalLogsStack.length > 0) {
+            logBody.innerHTML = '';
+            historicalLogsStack.forEach(log => {
+                const durationMinutes = Math.round(log.targetDurationSeconds / 60);
+                const modeLabel = log.type === 'focus' ? 'Lock In Session' : 'Rest Break';
+                const tagClass = log.completedOption ? 'complete' : 'interrupted';
+                const tagLabel = log.completedOption ? 'Completed' : 'Interrupted';
 
-            const row = document.createElement('tr');
-            row.innerHTML = `
-                <td>${log.timestamp}</td>
-                <td><strong>${modeLabel}</strong></td>
-                <td>${durationMinutes} mins</td>
-                <td><span class="status-tag ${tagClass}">${tagLabel}</span></td>
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td>${log.timestamp}</td>
+                    <td><strong>${modeLabel}</strong></td>
+                    <td>${durationMinutes} mins</td>
+                    <td><span class="status-tag ${tagClass}">${tagLabel}</span></td>
+                `;
+                logBody.appendChild(row);
+            });
+        } else {
+            logBody.innerHTML = `
+                <tr class="empty-row-notice">
+                    <td colspan="4">No historical telemetry compiled in terminal stack yet.</td>
+                </tr>
             `;
-            terminalLogBody.appendChild(row);
-        });
+        }
     }
 }
 
-// --- Dynamic Graphical Analytics Generator ---
 function renderProductivityCharts() {
-    const selectKey = chartTimelineSelector.value;
-    const items = metricsDatabase[selectKey];
-    const maxMins = Math.max(...items.map(i => i.mins), 1);
-    barChartContainer.innerHTML = '';
+    const activeDocument = widget.ownerDocument || document;
+    const chartContainer = activeDocument.getElementById('barChartContainer') || barChartContainer;
+    const selector = activeDocument.getElementById('chartTimelineSelector') || chartTimelineSelector;
+    
+    if (chartContainer && selector) {
+        const selectKey = selector.value;
+        const items = metricsDatabase[selectKey];
+        const maxMins = Math.max(...items.map(i => i.mins), 1);
+        chartContainer.innerHTML = '';
 
-    items.forEach((item, idx) => {
-        const heightPercentage = (item.mins / maxMins) * 100;
-        const column = document.createElement('div');
-        column.classList.add('chart-bar-column');
+        items.forEach((item, idx) => {
+            const heightPercentage = (item.mins / maxMins) * 100;
+            const column = document.createElement('div');
+            column.classList.add('chart-bar-column');
 
-        const isActive = idx === items.length - 1 ? 'active-bar' : '';
-        column.innerHTML = `
-            <div class="chart-bar-fill ${isActive}" style="height: ${heightPercentage}%" title="${item.mins} focused minutes"></div>
-            <div class="chart-bar-label">${item.label}</div>
-        `;
-        barChartContainer.appendChild(column);
-    });
+            const isActive = idx === items.length - 1 ? 'active-bar' : '';
+            column.innerHTML = `
+                <div class="chart-bar-fill ${isActive}" style="height: ${heightPercentage}%" title="${item.mins} focused minutes"></div>
+                <div class="chart-bar-label">${item.label}</div>
+            `;
+            chartContainer.appendChild(column);
+        });
+    }
 }
 
 function triggerTrophyCelebration() {
@@ -183,7 +226,6 @@ function triggerTrophyCelebration() {
     setTimeout(() => widgetCelebrationOverlay.classList.remove('celebrate-active'), 2400);
 }
 
-// Safely handles rendering whether running in parent DOM context or newly generated PiP DOM trees
 function getTargetCabinet() {
     const activeDocument = widget.ownerDocument || document;
     return activeDocument.getElementById('trophyCabinet') || trophyCabinet;
@@ -191,13 +233,17 @@ function getTargetCabinet() {
 
 function renderTrophiesUI() {
     const targetCabinet = getTargetCabinet();
-    if (totalTrophies > 0 && targetCabinet) {
-        targetCabinet.innerHTML = '';
-        for (let i = 0; i < totalTrophies; i++) {
-            const trophy = document.createElement('span');
-            trophy.classList.add('trophy-emoji');
-            trophy.textContent = '🏆';
-            targetCabinet.appendChild(trophy);
+    if (targetCabinet) {
+        if (totalTrophies > 0) {
+            targetCabinet.innerHTML = '';
+            for (let i = 0; i < totalTrophies; i++) {
+                const trophy = document.createElement('span');
+                trophy.classList.add('trophy-emoji');
+                trophy.textContent = '🏆';
+                targetCabinet.appendChild(trophy);
+            }
+        } else {
+            targetCabinet.innerHTML = `<div class="empty-cabinet-text">No milestones locked in yet. Complete a session!</div>`;
         }
     }
 }
@@ -215,7 +261,6 @@ function grantFocusTrophy() {
     renderProductivityCharts();
 }
 
-// --- Central Mode Rotator Routine Loop ---
 function switchMode(wasGracefullyCompleted = true) {
     commitLogToTerminal(currentMode, currentSessionTotalTarget, wasGracefullyCompleted);
 
@@ -266,7 +311,6 @@ function tick() {
     }
 }
 
-// --- Operational Click Controls ---
 function toggleTimer() {
     if (isRunning) {
         clearInterval(timer);
@@ -283,32 +327,90 @@ function toggleTimer() {
 
 function goToNextInterval() {
     clearInterval(timer);
-    const wasInterrupted = isRunning || (timeLeft < currentSessionTotalTarget);
+    const wasActivelyCounting = isRunning;
     isRunning = false;
-    switchMode(!wasInterrupted);
+    switchMode(false);
+    
+    if (wasActivelyCounting) {
+        toggleTimer(); 
+    }
 }
 
-// --- System Engine Dynamic Bootstrapping Recovery ---
+function triggerResetLogic() {
+    resetClickCount++;
+    
+    if (resetClickTimeout) clearTimeout(resetClickTimeout);
+
+    resetClickTimeout = setTimeout(() => {
+        resetClickCount = 0;
+    }, 2500);
+
+    if (resetClickCount === 1) {
+        clearInterval(timer);
+        isRunning = false;
+        timeLeft = currentSessionTotalTarget;
+        saveTimerStateToLocalStorage();
+        updateModeUIContext();
+        updateRollingDisplay();
+    } else if (resetClickCount === 3) {
+        clearInterval(timer);
+        isRunning = false;
+        
+        const countedToken = localStorage.getItem('lockdIn_countedOnPlatform');
+        localStorage.clear();
+        if (countedToken) localStorage.setItem('lockdIn_countedOnPlatform', countedToken);
+
+        currentMode = 'focus';
+        selectedFocusDuration = 180 * 60;
+        selectedRestDuration = 5 * 60;
+        timeLeft = selectedFocusDuration;
+        currentSessionTotalTarget = selectedFocusDuration;
+        totalTrophies = 0;
+        historicalLogsStack = [];
+
+        Object.keys(metricsDatabase).forEach(key => {
+            metricsDatabase[key].forEach(item => item.mins = 0);
+        });
+
+        saveTimerStateToLocalStorage();
+
+        document.querySelectorAll('.config-card').forEach(card => card.classList.remove('active'));
+        const defaultFocusCard = document.querySelector('#focusConfig .config-card[data-time="180"]');
+        const defaultRestCard = document.querySelector('#restConfig .config-card[data-time="5"]');
+        if (defaultFocusCard) defaultFocusCard.classList.add('active');
+        if (defaultRestCard) defaultRestCard.classList.add('active');
+
+        updateModeUIContext();
+        updateRollingDisplay();
+        renderTrophiesUI();
+        renderLogsUI();
+        renderProductivityCharts();
+        processUniquePlatformVisits();
+
+        resetClickCount = 0;
+        alert("WORKSPACE FULLY RESTORED");
+    }
+}
+
 function recoverActiveTimerState() {
     if (isRunning) {
         const expectedEnd = localStorage.getItem('lockdIn_expectedEndTime');
         if (expectedEnd) {
-            const dynamicDifference = Math.round((parseInt(expectedEnd) - Date.now()) / 1000);
+            let dynamicDifference = Math.round((parseInt(expectedEnd) - Date.now()) / 1000);
             
-            if (dynamicDifference > 0) {
-                timeLeft = dynamicDifference;
-                timer = setInterval(tick, 1000);
-            } else {
-                timeLeft = 0;
+            while (dynamicDifference <= 0) {
                 switchMode(true);
+                dynamicDifference = Math.round((parseInt(localStorage.getItem('lockdIn_expectedEndTime')) - Date.now()) / 1000);
             }
+            
+            timeLeft = dynamicDifference;
+            timer = setInterval(tick, 1000);
         } else {
             timer = setInterval(tick, 1000);
         }
     }
 }
 
-// --- Card Selection Configurations Engine Setup ---
 function setupConfigSelectors() {
     document.querySelectorAll('#focusConfig .config-card').forEach(card => {
         if (parseInt(card.dataset.time) * 60 === selectedFocusDuration) {
@@ -363,7 +465,6 @@ function setupConfigSelectors() {
     chartTimelineSelector.addEventListener('change', renderProductivityCharts);
 }
 
-// --- UI Workspace Theme Shifter ---
 function applyLoadedTheme() {
     if (isLightMode) {
         document.body.classList.replace('dark-mode', 'light-mode');
@@ -380,7 +481,6 @@ function toggleTheme() {
     applyLoadedTheme();
 }
 
-// --- Document Picture-in-Picture API Engine ---
 async function togglePiP() {
     if (!('documentPictureInPicture' in window)) {
         alert("This browser workspace environment does not support Document PiP popouts yet. Use Chrome or Edge.");
@@ -406,23 +506,21 @@ async function togglePiP() {
     pipWindow.document.body.className = isLightMode ? 'light-mode pip-mode' : 'dark-mode pip-mode';
     pipWindow.document.body.appendChild(widget);
 
-    // Call translation trigger instantly to match layouts inside newly initialized PiP document context
     setTimeout(updateRollingDisplay, 100);
 
     pipWindow.addEventListener('pagehide', () => {
         const workspace = document.querySelector('.upper-control-station');
         workspace.insertBefore(widget, workspace.firstChild);
-        // Recalculate back to desktop scale parameters
         updateRollingDisplay();
     });
 }
 
-// --- Recalculate dimensions on viewport resize events to protect transition translations layout heights ---
 window.addEventListener('resize', updateRollingDisplay);
 
 // --- Event Subscriptions Linkage ---
 startBtn.addEventListener('click', toggleTimer);
 nextBtn.addEventListener('click', goToNextInterval);
+resetBtn.addEventListener('click', triggerResetLogic);
 themeToggle.addEventListener('click', toggleTheme);
 pipBtn.addEventListener('click', togglePiP);
 

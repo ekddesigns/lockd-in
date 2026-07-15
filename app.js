@@ -78,9 +78,10 @@ function initializeWheels() {
     secsWheel.innerHTML = minsSecsHTML;
 }
 
-// Get the active variable row height from stylesheet to prevent sliding translations mismatch
+// CRITICAL FIX: Evaluates the active styles of whichever window document currently hosts the elements tree
 function getRowHeight() {
-    return parseInt(getComputedStyle(document.documentElement).getPropertyValue('--row-height')) || 80;
+    const activeDocument = widget.ownerDocument || document;
+    return parseInt(getComputedStyle(activeDocument.documentElement).getPropertyValue('--row-height')) || 80;
 }
 
 function updateRollingDisplay() {
@@ -389,9 +390,14 @@ async function togglePiP() {
     pipWindow.document.body.className = isLightMode ? 'light-mode pip-mode' : 'dark-mode pip-mode';
     pipWindow.document.body.appendChild(widget);
 
+    // Call transition trigger to recalculate layouts inside newly initialized PiP document context
+    setTimeout(updateRollingDisplay, 100);
+
     pipWindow.addEventListener('pagehide', () => {
         const workspace = document.querySelector('.upper-control-station');
         workspace.insertBefore(widget, workspace.firstChild);
+        // Force rendering back to desktop scales
+        updateRollingDisplay();
     });
 }
 

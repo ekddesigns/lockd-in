@@ -78,10 +78,19 @@ function initializeWheels() {
     secsWheel.innerHTML = minsSecsHTML;
 }
 
-// CRITICAL FIX: Evaluates the active styles of whichever window document currently hosts the elements tree
+// BULLETPROOF RELIABLE HEIGHT CALCULATION:
+// Explicitly checks the layout document context to return exactly 60px inside PiP / Mobile and 80px on standard desktop
 function getRowHeight() {
     const activeDocument = widget.ownerDocument || document;
-    return parseInt(getComputedStyle(activeDocument.documentElement).getPropertyValue('--row-height')) || 80;
+    
+    // 1. Check if the element is currently sitting in the popped out PiP document window
+    if (activeDocument !== document) {
+        return 60; 
+    }
+    
+    // 2. Fall back to reading viewport properties on standard document
+    const isMobileLayout = window.matchMedia("(max-width: 768px)").matches;
+    return isMobileLayout ? 60 : 80;
 }
 
 function updateRollingDisplay() {
@@ -174,14 +183,21 @@ function triggerTrophyCelebration() {
     setTimeout(() => widgetCelebrationOverlay.classList.remove('celebrate-active'), 2400);
 }
 
+// Safely handles rendering whether running in parent DOM context or newly generated PiP DOM trees
+function getTargetCabinet() {
+    const activeDocument = widget.ownerDocument || document;
+    return activeDocument.getElementById('trophyCabinet') || trophyCabinet;
+}
+
 function renderTrophiesUI() {
-    if (totalTrophies > 0) {
-        trophyCabinet.innerHTML = '';
+    const targetCabinet = getTargetCabinet();
+    if (totalTrophies > 0 && targetCabinet) {
+        targetCabinet.innerHTML = '';
         for (let i = 0; i < totalTrophies; i++) {
             const trophy = document.createElement('span');
             trophy.classList.add('trophy-emoji');
             trophy.textContent = '🏆';
-            trophyCabinet.appendChild(trophy);
+            targetCabinet.appendChild(trophy);
         }
     }
 }
@@ -390,13 +406,13 @@ async function togglePiP() {
     pipWindow.document.body.className = isLightMode ? 'light-mode pip-mode' : 'dark-mode pip-mode';
     pipWindow.document.body.appendChild(widget);
 
-    // Call transition trigger to recalculate layouts inside newly initialized PiP document context
+    // Call translation trigger instantly to match layouts inside newly initialized PiP document context
     setTimeout(updateRollingDisplay, 100);
 
     pipWindow.addEventListener('pagehide', () => {
         const workspace = document.querySelector('.upper-control-station');
         workspace.insertBefore(widget, workspace.firstChild);
-        // Force rendering back to desktop scales
+        // Recalculate back to desktop scale parameters
         updateRollingDisplay();
     });
 }

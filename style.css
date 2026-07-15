@@ -3,7 +3,7 @@
     margin: 0;
     padding: 0;
     box-sizing: border-box;
-    font-family: 'Poppins', sans-serif;
+    font-family: 'Space Grotesk', sans-serif; /* Global base UI typeface */
 }
 
 :root {
@@ -18,7 +18,7 @@
     --status-success: #10b981;
     --status-fail: #ef4444;
     
-    /* Desktop rolling digit row height (JS reads this sync) */
+    /* Base kinetic wheel slot height metrics */
     --row-height: 80px;
 }
 
@@ -120,7 +120,7 @@ body {
 
 .config-card {
     flex: 1;
-    min-width: 70px;
+    min-width: 75px;
     background-color: var(--btn-secondary-bg);
     border: 1px solid var(--border-color);
     border-radius: 14px;
@@ -221,7 +221,15 @@ body {
 .trophy-celebration-overlay.celebrate-active { opacity: 1; transform: scale(1); pointer-events: auto; }
 
 .widget-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; }
-.app-logo { font-size: 1.25rem; font-weight: 700; letter-spacing: -0.03em; color: var(--text-main); }
+
+.app-logo { 
+    font-family: 'Russo One', sans-serif; /* Assigned dedicated headline font */
+    font-size: 1.4rem; 
+    font-weight: 400; 
+    letter-spacing: 0.04em; 
+    color: var(--text-main); 
+}
+
 .icon-btn { background: none; border: none; color: var(--text-muted); cursor: pointer; padding: 6px; display: flex; align-items: center; border-radius: 8px; }
 .icon-btn:hover { color: var(--text-main); background: var(--btn-secondary-bg); }
 .state-indicator { font-size: 0.8rem; font-weight: 600; letter-spacing: 0.12em; text-transform: uppercase; color: var(--text-muted); margin-bottom: 12px; }
@@ -272,8 +280,8 @@ body {
 }
 
 /* --- Controls Buttons --- */
-.controls { display: flex; gap: 12px; margin-bottom: 24px; }
-.btn { flex: 1; padding: 14px; border: none; border-radius: 14px; font-size: 0.9rem; font-weight: 600; cursor: pointer; }
+.controls { display: flex; gap: 8px; margin-bottom: 24px; }
+.btn { flex: 1; padding: 14px 6px; border: none; border-radius: 14px; font-size: 0.85rem; font-weight: 600; cursor: pointer; }
 .btn-primary { background-color: var(--accent-color); color: var(--bg-color); }
 .btn-secondary { background-color: var(--btn-secondary-bg); color: var(--text-main); border: 1px solid var(--border-color); }
 .btn:hover { opacity: 0.9; transform: translateY(-1px); }
@@ -342,7 +350,7 @@ body.pip-mode .widget-container {
     .config-card {
         padding: 8px 4px;
         border-radius: 10px;
-        min-width: 60px;
+        min-width: 65px;
     }
     
     .card-time {

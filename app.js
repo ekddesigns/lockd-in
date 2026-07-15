@@ -78,14 +78,21 @@ function initializeWheels() {
     secsWheel.innerHTML = minsSecsHTML;
 }
 
+// Get the active variable row height from stylesheet to prevent sliding translations mismatch
+function getRowHeight() {
+    return parseInt(getComputedStyle(document.documentElement).getPropertyValue('--row-height')) || 80;
+}
+
 function updateRollingDisplay() {
     const hours = Math.floor(timeLeft / 3600);
     const minutes = Math.floor((timeLeft % 3600) / 60);
     const seconds = timeLeft % 60;
 
-    hoursWheel.style.transform = `translateY(-${hours * 80}px)`;
-    minsWheel.style.transform = `translateY(-${minutes * 80}px)`;
-    secsWheel.style.transform = `translateY(-${seconds * 80}px)`;
+    const rowHeight = getRowHeight();
+
+    hoursWheel.style.transform = `translateY(-${hours * rowHeight}px)`;
+    minsWheel.style.transform = `translateY(-${minutes * rowHeight}px)`;
+    secsWheel.style.transform = `translateY(-${seconds * rowHeight}px)`;
 
     const hStr = hours.toString().padStart(2, '0');
     const mStr = minutes.toString().padStart(2, '0');
@@ -387,6 +394,9 @@ async function togglePiP() {
         workspace.insertBefore(widget, workspace.firstChild);
     });
 }
+
+// --- Recalculate dimensions on viewport resize events to protect transition translations layout heights ---
+window.addEventListener('resize', updateRollingDisplay);
 
 // --- Event Subscriptions Linkage ---
 startBtn.addEventListener('click', toggleTimer);

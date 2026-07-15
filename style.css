@@ -17,6 +17,9 @@
     --active-selection: #262626;
     --status-success: #10b981;
     --status-fail: #ef4444;
+    
+    /* Variable step height for mechanical timer translations */
+    --row-height: 80px;
 }
 
 .light-mode {
@@ -224,11 +227,49 @@ body {
 .state-indicator { font-size: 0.8rem; font-weight: 600; letter-spacing: 0.12em; text-transform: uppercase; color: var(--text-muted); margin-bottom: 12px; }
 
 /* --- Mechanical Rolling Wheel System --- */
-.timer-display { display: flex; justify-content: center; align-items: center; gap: 4px; font-size: 3.2rem; font-weight: 600; letter-spacing: -0.02em; margin-bottom: 32px; color: var(--text-main); height: 80px; overflow: hidden; }
-.time-col { width: 72px; height: 80px; position: relative; }
-.digit-wheel { position: absolute; width: 100%; left: 0; top: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; transition: transform 0.45s cubic-bezier(0.23, 1, 0.32, 1); }
-.digit-wheel div { height: 80px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
-.colon { height: 80px; display: flex; align-items: center; padding-bottom: 8px; color: var(--text-main); }
+.timer-display { 
+    display: flex; 
+    justify-content: center; 
+    align-items: center; 
+    gap: 4px; 
+    font-size: 3.2rem; 
+    font-weight: 600; 
+    letter-spacing: -0.02em; 
+    margin-bottom: 32px; 
+    color: var(--text-main); 
+    height: var(--row-height); 
+    overflow: hidden; 
+}
+.time-col { 
+    width: 72px; 
+    height: var(--row-height); 
+    position: relative; 
+}
+.digit-wheel { 
+    position: absolute; 
+    width: 100%; 
+    left: 0; 
+    top: 0; 
+    display: flex; 
+    flex-direction: column; 
+    align-items: center; 
+    justify-content: center; 
+    transition: transform 0.45s cubic-bezier(0.23, 1, 0.32, 1); 
+}
+.digit-wheel div { 
+    height: var(--row-height); 
+    display: flex; 
+    align-items: center; 
+    justify-content: center; 
+    flex-shrink: 0; 
+}
+.colon { 
+    height: var(--row-height); 
+    display: flex; 
+    align-items: center; 
+    padding-bottom: 8px; 
+    color: var(--text-main); 
+}
 
 /* --- Controls Buttons --- */
 .controls { display: flex; gap: 12px; margin-bottom: 24px; }
@@ -243,3 +284,70 @@ body {
 /* --- Picture in Picture Environment Isolation Window Context overrides --- */
 body.pip-mode { background-color: var(--bg-color); height: 100vh; width: 100vw; margin: 0; padding: 0; display: flex; justify-content: center; align-items: center; }
 body.pip-mode .widget-container { width: 100vw; height: 100vh; border-radius: 0px; border: none; box-shadow: none; padding: 20px; }
+
+
+/* --- RESPONSIVE MEDIA QUERIES --- */
+@media (max-width: 768px) {
+    body {
+        padding: 40px 12px 24px 12px;
+    }
+    
+    .app-workspace {
+        gap: 20px;
+    }
+    
+    .upper-control-station {
+        flex-direction: column;
+        align-items: center;
+        gap: 20px;
+        width: 100%;
+    }
+    
+    .widget-container {
+        width: 100%;
+        max-width: 380px;
+        padding: 28px 20px;
+    }
+    
+    .control-config-panel {
+        width: 100%;
+        max-width: 380px;
+        padding: 20px;
+        border-radius: 20px;
+    }
+    
+    .lower-dashboard-station {
+        padding: 24px 16px;
+        border-radius: 24px;
+        gap: 24px;
+    }
+    
+    .config-card {
+        padding: 8px 4px;
+        border-radius: 10px;
+        min-width: 60px;
+    }
+    
+    .card-time {
+        font-size: 1rem;
+    }
+    
+    .card-unit {
+        font-size: 0.55rem;
+    }
+}
+
+@media (max-width: 420px) {
+    :root {
+        /* Scale timer wheel step sizes down dynamically to prevent overlaps on tiny screens */
+        --row-height: 60px;
+    }
+    
+    .timer-display {
+        margin-bottom: 24px;
+    }
+    
+    .time-col {
+        width: 56px;
+    }
+}

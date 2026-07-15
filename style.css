@@ -18,7 +18,7 @@
     --status-success: #10b981;
     --status-fail: #ef4444;
     
-    /* Variable step height for mechanical timer translations */
+    /* Base kinetic wheel slot height metrics */
     --row-height: 80px;
 }
 
@@ -282,8 +282,24 @@ body {
 .widget-footer a:hover { text-decoration: underline; }
 
 /* --- Picture in Picture Environment Isolation Window Context overrides --- */
-body.pip-mode { background-color: var(--bg-color); height: 100vh; width: 100vw; margin: 0; padding: 0; display: flex; justify-content: center; align-items: center; }
-body.pip-mode .widget-container { width: 100vw; height: 100vh; border-radius: 0px; border: none; box-shadow: none; padding: 20px; }
+body.pip-mode { 
+    background-color: var(--bg-color); 
+    height: 100vh; 
+    width: 100vw; 
+    margin: 0; 
+    padding: 0; 
+    display: flex; 
+    justify-content: center; 
+    align-items: center; 
+}
+body.pip-mode .widget-container { 
+    width: 100vw; 
+    height: 100vh; 
+    border-radius: 0px; 
+    border: none; 
+    box-shadow: none; 
+    padding: 20px; 
+}
 
 
 /* --- RESPONSIVE MEDIA QUERIES --- */
@@ -339,7 +355,7 @@ body.pip-mode .widget-container { width: 100vw; height: 100vh; border-radius: 0p
 
 @media (max-width: 420px) {
     :root {
-        /* Scale timer wheel step sizes down dynamically to prevent overlaps on tiny screens */
+        /* Scale down slot sizes dynamically inside small viewports or active PiP screens */
         --row-height: 60px;
     }
     

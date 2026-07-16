@@ -208,7 +208,7 @@ body {
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
-    display: none; /* Controlled dynamically via JS state updates */
+    display: none; 
 }
 
 .inline-task-display::before {
@@ -375,33 +375,43 @@ body.pip-mode .widget-container {
     box-shadow: none; 
     padding: 12px; 
 }
-body.pip-mode .auxiliary-control,
-body.pip-mode .widget-footer {
-    display: none !important; 
-}
-body.pip-mode .controls {
-    margin-bottom: 0px;
+
+/* --- HEIGHT-BASED RESPONSIVE PROGRESSIVE BREAKPOINTS --- */
+/* Priorities ordered so buttons vanish absolute first when vertical space compresses */
+@media (max-height: 290px) {
+    .controls {
+        display: none !important; /* FIRST THING TO DISAPPEAR: Control button group drops immediately */
+    }
+    .widget-container {
+        padding-bottom: 12px;
+    }
 }
 
-/* --- MICRO RESPONSIVE SCALING (HEIGHT-BASED FILTERS) --- */
-@media (max-height: 250px) {
+@media (max-height: 240px) {
     .widget-header,
-    .widget-footer,
-    .state-indicator-row {
-        display: none !important; 
+    .widget-footer {
+        display: none !important; /* SECOND STEP: Logo headers and branding text disappear */
     }
     .timer-display {
         margin-bottom: 12px;
     }
 }
 
-@media (max-height: 160px) {
-    .controls,
+@media (max-height: 175px) {
     .task-space-container {
-        display: none !important; 
+        display: none !important; /* THIRD STEP: Editing text input box vanishes */
     }
     .timer-display {
         margin-bottom: 0px; 
+    }
+    .state-indicator-row {
+        margin-bottom: 4px; /* Leaves exclusively the combined (Lockd in — task) line above clock tracks */
+    }
+}
+
+@media (max-height: 110px) {
+    .state-indicator-row {
+        display: none !important; /* FINAL BOUNDARY: Drops text layer, showing solely the raw scrolling clock digits */
     }
 }
 
@@ -423,5 +433,4 @@ body.pip-mode .controls {
     :root { --row-height: 60px; }
     .timer-display { margin-bottom: 24px; }
     .time-col { width: 56px; }
-    .auxiliary-control { display: none !important; }
 }

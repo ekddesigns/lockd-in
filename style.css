@@ -208,6 +208,7 @@ body {
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
+    display: none; /* Controlled dynamically via JS state updates */
 }
 
 .inline-task-display::before {
@@ -383,12 +384,11 @@ body.pip-mode .controls {
 }
 
 /* --- MICRO RESPONSIVE SCALING (HEIGHT-BASED FILTERS) --- */
-/* If the window height is decreased even more inside PiP frames */
 @media (max-height: 250px) {
     .widget-header,
     .widget-footer,
     .state-indicator-row {
-        display: none !important; /* Safely removes all upper layout frames */
+        display: none !important; 
     }
     .timer-display {
         margin-bottom: 12px;
@@ -398,10 +398,10 @@ body.pip-mode .controls {
 @media (max-height: 160px) {
     .controls,
     .task-space-container {
-        display: none !important; /* Hides interaction parameters when height constraints shrink further */
+        display: none !important; 
     }
     .timer-display {
-        margin-bottom: 0px; /* Only the timer is seen clearly */
+        margin-bottom: 0px; 
     }
 }
 

@@ -3,12 +3,20 @@ let timer;
 let isRunning = localStorage.getItem('lockdIn_isRunning') === 'true';
 let currentMode = localStorage.getItem('lockdIn_currentMode') || 'focus'; 
 let isLightMode = localStorage.getItem('lockdIn_lightMode') === 'true';
+let pendingCompletionSound = null;
 
-// Default Fallbacks: 3 Hours focus (180 mins) & 5 Mins rest (5 mins)
-let selectedFocusDuration = parseInt(localStorage.getItem('lockdIn_selectedFocus')) || 180 * 60; 
-let selectedRestDuration = parseInt(localStorage.getItem('lockdIn_selectedRest')) || 5 * 60;
-let timeLeft = parseInt(localStorage.getItem('lockdIn_timeLeft')) || selectedFocusDuration;
-let currentSessionTotalTarget = parseInt(localStorage.getItem('lockdIn_totalTarget')) || selectedFocusDuration;
+// Robust parsing checks to eliminate null-glitch resets completely
+let storedFocus = parseInt(localStorage.getItem('lockdIn_selectedFocus'));
+let selectedFocusDuration = isNaN(storedFocus) ? 180 * 60 : storedFocus;
+
+let storedRest = parseInt(localStorage.getItem('lockdIn_selectedRest'));
+let selectedRestDuration = isNaN(storedRest) ? 5 * 60 : storedRest;
+
+let storedTime = parseInt(localStorage.getItem('lockdIn_timeLeft'));
+let timeLeft = isNaN(storedTime) ? selectedFocusDuration : storedTime;
+
+let storedTarget = parseInt(localStorage.getItem('lockdIn_totalTarget'));
+let currentSessionTotalTarget = isNaN(storedTarget) ? selectedFocusDuration : storedTarget;
 
 let totalTrophies = parseInt(localStorage.getItem('lockdIn_trophyCount')) || 0;
 let historicalLogsStack = JSON.parse(localStorage.getItem('lockdIn_terminalLogs')) || [];
@@ -46,6 +54,14 @@ const chartTimelineSelector = document.getElementById('chartTimelineSelector');
 const widgetCelebrationOverlay = document.getElementById('widgetCelebrationOverlay');
 const globalVisitorCount = document.getElementById('globalVisitorCount');
 const taskInputField = document.getElementById('taskInputField');
+
+// Profile Card Elements
+const downloadCardBtn = document.getElementById('downloadCardBtn');
+const cardTimelineSelector = document.querySelector('.profile-card-section #cardTimelineSelector');
+const cardTimelineLabel = document.getElementById('cardTimelineLabel');
+const cardMetricsDisplay = document.getElementById('cardMetricsDisplay');
+const cardTrophyBadge = document.getElementById('cardTrophyBadge');
+const profileCardCanvasFrame = document.getElementById('profileCardCanvasFrame');
 
 let resetClickCount = 0;
 let resetClickTimeout;
@@ -93,9 +109,11 @@ function getRowHeight() {
 }
 
 function updateRollingDisplay() {
-    const hours = Math.floor(timeLeft / 3600);
-    const minutes = Math.floor((timeLeft % 3600) / 60);
-    const seconds = timeLeft % 60;
+    // Failsafe: Ensures math strictly never calculates backwards/negative pixel matrices 
+    const safeTimeLeft = Math.max(timeLeft, 0);
+    const hours = Math.floor(safeTimeLeft / 3600);
+    const minutes = Math.floor((safeTimeLeft % 3600) / 60);
+    const seconds = safeTimeLeft % 60;
 
     const rowHeight = getRowHeight();
 
@@ -109,43 +127,51 @@ function updateRollingDisplay() {
     document.title = `(${hStr}:${mStr}:${sStr}) Lockd In`;
 }
 
-// --- FIXED TRUE REAL-TIME GLOBAL CLOUD VISITOR COUNTER ENGINE ---
+// --- TRUE REAL-TIME GLOBAL CLOUD VISITOR COUNTER ENGINE ---
 async function processUniquePlatformVisits() {
     let hasBeenCounted = localStorage.getItem('lockdIn_countedOnPlatform');
     const workspaceKey = "ekddesigns_lockdin_workspace";
     const metricKey = "unique_builders_joined";
-    
+
+    const cachedCount = parseInt(localStorage.getItem('lockdIn_lastKnownCount'));
+    if (!isNaN(cachedCount) && cachedCount > 0) {
+        const activeDocument = widget.ownerDocument || document;
+        const currentCounterNode = activeDocument.getElementById('globalVisitorCount') || globalVisitorCount;
+        if (currentCounterNode) {
+            currentCounterNode.textContent = cachedCount.toString().padStart(3, '0');
+        }
+    }
+
     const fetchGlobalMetrics = async (incrementData = false) => {
         try {
-            const url = incrementData 
+            const url = incrementData
                 ? `https://api.counterapi.dev/v1/${workspaceKey}/${metricKey}/up`
                 : `https://api.counterapi.dev/v1/${workspaceKey}/${metricKey}`;
-                
+
             const response = await fetch(url);
             const data = await response.json();
             const globalTotal = data.count || 1;
-            
-            // Updates counter fields inside active document views seamlessly
+
+            localStorage.setItem('lockdIn_lastKnownCount', globalTotal);
+
             const activeDocument = widget.ownerDocument || document;
             const currentCounterNode = activeDocument.getElementById('globalVisitorCount') || globalVisitorCount;
             if (currentCounterNode) {
                 currentCounterNode.textContent = globalTotal.toString().padStart(3, '0');
             }
-            
+
             if (globalTotal >= 100) {
                 triggerMegaMilestoneCelebration(globalTotal);
             }
         } catch (error) {
             console.warn("Global network synchronization dropped.", error);
-            let fallbackSeed = parseInt(localStorage.getItem('lockdIn_networkTrafficSeed')) || 1;
-            if (incrementData) {
-                fallbackSeed++;
-                localStorage.setItem('lockdIn_networkTrafficSeed', fallbackSeed);
-            }
-            const activeDocument = widget.ownerDocument || document;
-            const currentCounterNode = activeDocument.getElementById('globalVisitorCount') || globalVisitorCount;
-            if (currentCounterNode) {
-                currentCounterNode.textContent = fallbackSeed.toString().padStart(3, '0');
+            const lastKnown = parseInt(localStorage.getItem('lockdIn_lastKnownCount'));
+            if (!isNaN(lastKnown) && lastKnown > 0) {
+                const activeDocument = widget.ownerDocument || document;
+                const currentCounterNode = activeDocument.getElementById('globalVisitorCount') || globalVisitorCount;
+                if (currentCounterNode) {
+                    currentCounterNode.textContent = lastKnown.toString().padStart(3, '0');
+                }
             }
         }
     };
@@ -154,13 +180,12 @@ async function processUniquePlatformVisits() {
         await fetchGlobalMetrics(true);
         localStorage.setItem('lockdIn_countedOnPlatform', 'true');
     } else {
-        await fetchGlobalMetrics(false); 
+        await fetchGlobalMetrics(false);
     }
 
-    // Dynamic polling loops update records live
     setInterval(async () => {
         await fetchGlobalMetrics(false);
-    }, 10000);
+    }, 60000);
 }
 
 function triggerMegaMilestoneCelebration(count) {
@@ -182,6 +207,60 @@ function commitLogToTerminal(type, targetDurationSeconds, completedOption, isPre
         localStorage.setItem('lockdIn_terminalLogs', JSON.stringify(historicalLogsStack));
     }
     renderLogsUI();
+}
+
+// --- Dynamic Profile Glass Card Metrics Calculation Engine ---
+function renderProfileCardData() {
+    const activeDocument = widget.ownerDocument || document;
+    const innerSelector = activeDocument.getElementById('cardTimelineSelector') || cardTimelineSelector;
+    const innerLabel = activeDocument.getElementById('cardTimelineLabel') || cardTimelineLabel;
+    const innerDisplay = activeDocument.getElementById('cardMetricsDisplay') || cardMetricsDisplay;
+    const innerBadge = activeDocument.getElementById('cardTrophyBadge') || cardTrophyBadge;
+
+    if (!innerSelector || !innerDisplay) return;
+
+    const timelineKey = innerSelector.value; 
+    const items = metricsDatabase[timelineKey];
+
+    let totalMinutes = 0;
+    if (timelineKey === 'daily') {
+        const currentDayIndex = new Date().getDay();
+        totalMinutes = items[currentDayIndex].mins;
+    } else {
+        totalMinutes = items.reduce((sum, current) => sum + current.mins, 0);
+    }
+
+    const totalHours = (totalMinutes / 60).toFixed(1);
+
+    if (innerLabel) innerLabel.textContent = `${timelineKey.charAt(0).toUpperCase() + timelineKey.slice(1)} Focus`;
+    innerDisplay.textContent = `${totalHours} hrs`;
+    if (innerBadge) innerBadge.textContent = `${totalTrophies} Trophies 🏆`;
+}
+
+// --- html2canvas Core Image Generation Downloader Engine ---
+async function downloadProfileCardAsJpg() {
+    renderProfileCardData();
+    try {
+        const canvas = await html2canvas(profileCardCanvasFrame, {
+            scale: 2, 
+            backgroundColor: "#050505",
+            logging: false,
+            useCORS: true 
+        });
+
+        const imageURL = canvas.toDataURL("image/jpeg", 0.95); 
+        const virtualAnchor = document.createElement('a');
+        const activeRange = (cardTimelineSelector.value || "focus").toLowerCase();
+        
+        virtualAnchor.href = imageURL;
+        virtualAnchor.download = `LockdIn_ProfileCard_${activeRange}.jpg`;
+        document.body.appendChild(virtualAnchor);
+        virtualAnchor.click();
+        document.body.removeChild(virtualAnchor);
+        
+    } catch (err) {
+        console.error("Canvas export rendering failed.", err);
+    }
 }
 
 function renderLogsUI() {
@@ -280,6 +359,7 @@ function grantFocusTrophy() {
     
     localStorage.setItem('lockdIn_metricsDatabase', JSON.stringify(metricsDatabase));
     renderProductivityCharts();
+    renderProfileCardData(); 
 }
 
 function switchMode(wasGracefullyCompleted = true) {
@@ -352,7 +432,9 @@ function tick() {
         updateRollingDisplay();
     } else {
         switchMode(true);
-        toggleTimer(); 
+        // Do NOT blindly call toggleTimer() here, which recursively fights itself and turns the tracker OFF. 
+        // Simply let the active setInterval heart pulse continue tracking the *newly* rotated timeLeft integer!
+        saveTimerStateToLocalStorage();
     }
 }
 
@@ -434,6 +516,7 @@ function triggerResetLogic() {
             renderTrophiesUI();
             renderLogsUI();
             renderProductivityCharts();
+            renderProfileCardData();
             
             resetClickCount = 0;
         } else {
@@ -444,24 +527,63 @@ function triggerResetLogic() {
     }
 }
 
+// SAFER RECOVERY LOOP LOGIC:
 function recoverActiveTimerState() {
     if (isRunning) {
         const expectedEnd = localStorage.getItem('lockdIn_expectedEndTime');
-        if (expectedEnd) {
+        if (expectedEnd && expectedEnd !== "undefined" && !isNaN(expectedEnd)) {
             let dynamicDifference = Math.round((parseInt(expectedEnd) - Date.now()) / 1000);
-            
-            while (dynamicDifference <= 0) {
-                switchMode(true);
-                dynamicDifference = Math.round((parseInt(localStorage.getItem('lockdIn_expectedEndTime')) - Date.now()) / 1000);
+
+            if (dynamicDifference > 0) {
+                timeLeft = dynamicDifference;
+            } else {
+                pendingCompletionSound = currentMode === 'focus' ? 'focus' : 'rest';
+                if (currentMode === 'focus') {
+                    grantFocusTrophy();
+                    triggerTrophyCelebration();
+                }
+                timeLeft = 0;
+                switchMode(false);
+                setupDeferredSoundPlayback();
+                return;
             }
-            
-            timeLeft = dynamicDifference;
-            timer = setInterval(tick, 1000);
-        } else {
-            timer = setInterval(tick, 1000);
         }
+        timer = setInterval(tick, 1000);
     }
 }
+
+function setupDeferredSoundPlayback() {
+    function playPendingSound() {
+        if (!pendingCompletionSound) return;
+        const sound = pendingCompletionSound === 'focus' ? focusEndSound : restEndSound;
+        sound.currentTime = 0;
+        sound.play().catch(e => console.log('Audio error:', e));
+        pendingCompletionSound = null;
+        document.removeEventListener('click', playPendingSound);
+        document.removeEventListener('keydown', playPendingSound);
+        document.removeEventListener('touchstart', playPendingSound);
+    }
+    document.addEventListener('click', playPendingSound, { once: true });
+    document.addEventListener('keydown', playPendingSound, { once: true });
+    document.addEventListener('touchstart', playPendingSound, { once: true });
+}
+
+document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible' && isRunning) {
+        const expectedEnd = localStorage.getItem('lockdIn_expectedEndTime');
+        if (expectedEnd && expectedEnd !== "undefined" && !isNaN(expectedEnd)) {
+            let dynamicDifference = Math.round((parseInt(expectedEnd) - Date.now()) / 1000);
+            if (dynamicDifference <= 0) {
+                timeLeft = 0;
+                switchMode(true);
+                saveTimerStateToLocalStorage();
+            } else {
+                timeLeft = dynamicDifference;
+            }
+            updateRollingDisplay();
+        }
+    }
+});
 
 function setupConfigSelectors() {
     document.querySelectorAll('#focusConfig .config-card').forEach(card => {
@@ -521,6 +643,9 @@ function setupConfigSelectors() {
     });
 
     chartTimelineSelector.addEventListener('change', renderProductivityCharts);
+    
+    if (cardTimelineSelector) cardTimelineSelector.addEventListener('change', renderProfileCardData);
+    if (downloadCardBtn) downloadCardBtn.addEventListener('click', downloadProfileCardAsJpg);
 }
 
 function applyLoadedTheme() {
@@ -529,7 +654,7 @@ function applyLoadedTheme() {
         themeIcon.innerHTML = `<path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>`;
     } else {
         document.body.classList.replace('light-mode', 'dark-mode');
-        themeIcon.innerHTML = `<circle cx="12" cy="12" r="5"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2+M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/>`;
+        themeIcon.innerHTML = `<circle cx="12" cy="12" r="5"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/>`;
     }
 }
 
@@ -566,7 +691,6 @@ async function togglePiP() {
     pipWindow.document.body.className = isLightMode ? 'light-mode pip-mode' : 'dark-mode pip-mode';
     pipWindow.document.body.appendChild(widget);
 
-    // Re-attach triggers to look into PiP context variables
     const pipStartBtn = pipWindow.document.getElementById('startBtn');
     const pipNextBtn = pipWindow.document.getElementById('nextBtn');
     const pipResetBtn = pipWindow.document.getElementById('resetBtn');
@@ -616,3 +740,4 @@ commitLogToTerminal(null, null, null, true);
 renderTrophiesUI();
 applyLoadedTheme();
 processUniquePlatformVisits();
+renderProfileCardData();

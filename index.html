@@ -4,43 +4,33 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Lockd In — Focus Workspace</title>
-    <!-- Google Fonts: Russo One for Logo, Space Grotesk for Workspace UI -->
     <link href="https://fonts.googleapis.com/css2?family=Russo+One&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="style.css">
 </head>
 <body class="dark-mode">
 
-    <!-- Theme Toggle Icon -->
     <div class="theme-toggle" id="themeToggle" title="Toggle Theme">
         <svg id="themeIcon" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>
     </div>
 
-    <!-- Main Web App Application Layout Wrapper -->
     <main class="app-workspace">
         
-        <!-- TOP ROW: Active Focus Control Station Layout -->
         <section class="upper-control-station">
-            <!-- LEFT SIDE: Main Central Widget Component -->
             <div class="widget-container" id="widget">
-                <!-- Global Internal Pop Animation Canvas -->
                 <div class="trophy-celebration-overlay" id="widgetCelebrationOverlay">🏆</div>
 
-                <!-- Header Module Area -->
                 <div class="widget-header">
                     <span class="app-logo">LOCKD IN</span>
-                    <!-- PiP Button Component -->
                     <button id="pipBtn" class="icon-btn" title="Pop out widget into floating desktop view">
                         <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="8" y="8" width="12" height="10" rx="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg>
                     </button>
                 </div>
                 
-                <!-- Dynamic State Text Indicator Block -->
                 <div class="state-indicator-row">
                     <span class="state-indicator" id="stateIndicator">Lockd in</span>
                     <span class="inline-task-display" id="inlineTaskDisplay"></span>
                 </div>
                 
-                <!-- Rotating Mechanical Number Counter Frame (HH : MM : SS) -->
                 <div class="timer-display">
                     <div class="time-col">
                         <div class="digit-wheel" id="hoursWheel"></div>
@@ -55,25 +45,21 @@
                     </div>
                 </div>
 
-                <!-- Interactive Task Input Field -->
                 <div class="task-space-container" id="taskSpaceContainer">
                     <input type="text" id="taskInputField" class="task-input" placeholder="What target are we locking into?..." title="Type your active session target objective here">
                 </div>
                 
-                <!-- Contextual Operational Controls -->
                 <div class="controls">
                     <button id="startBtn" class="btn btn-primary">Start</button>
                     <button id="nextBtn" class="btn btn-secondary auxiliary-control">Next</button>
                     <button id="resetBtn" class="btn btn-secondary auxiliary-control" title="Click 1x to reset timer. Click 3x to clear all data.">Reset</button>
                 </div>
 
-                <!-- Professional Branding Footer Signature Line -->
                 <div class="widget-footer">
                     Lockd In by <a href="https://t.me/ekddesign" target="_blank">@ekddesigns</a>
                 </div>
             </div>
 
-            <!-- RIGHT SIDE: Config Targets & Swapped Milestone Cabinet -->
             <div class="control-config-panel">
                 <div class="panel-section">
                     <h3>Lock In Target</h3>
@@ -120,7 +106,6 @@
                     </div>
                 </div>
 
-                <!-- Milestone Trophy Cabinet Tracker -->
                 <div class="panel-section cabinet-section">
                     <h3>Milestones achieved</h3>
                     <div class="trophy-cabinet" id="trophyCabinet">
@@ -130,10 +115,8 @@
             </div>
         </section>
 
-        <!-- SCROLLABLE BOTTOM SECTION: Extended Analytics, Logs & Swapped Platform Activity -->
         <section class="lower-dashboard-station">
             
-            <!-- Productivity Bar Charts Panel Component -->
             <div class="panel-section chart-section">
                 <div class="section-header-row">
                     <h3>Productivity Metric Charts</h3>
@@ -145,12 +128,10 @@
                 </div>
                 <div class="chart-wrapper">
                     <div class="chart-container" id="barChartContainer">
-                        <!-- Chart columns dynamically populated through script logic -->
-                    </div>
+                        </div>
                 </div>
             </div>
 
-            <!-- Tabular Logging Terminal Window -->
             <div class="panel-section terminal-section">
                 <h3>Session Activity Terminal Log</h3>
                 <div class="table-scroll-frame">
@@ -172,7 +153,6 @@
                 </div>
             </div>
 
-            <!-- Unique Global Network Visitor Counter Block -->
             <div class="panel-section visitor-counter-section">
                 <h3>Global Platform Activity</h3>
                 <div class="visitor-display-box">
@@ -191,7 +171,6 @@
 
     </main>
 
-    <!-- Contextual Distinct Audio Signaling Channels from Mixkit -->
     <audio id="focusEndSound" src="https://assets.mixkit.co/active_storage/sfx/2568/2568-84.wav" preload="auto"></audio>
     <audio id="restEndSound" src="https://assets.mixkit.co/active_storage/sfx/911/911-84.wav" preload="auto"></audio>
 

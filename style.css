@@ -217,6 +217,102 @@ body {
     color: var(--text-muted);
 }
 
+/* --- Controls Header Layout and Mini Button Overrides --- */
+.card-export-controls {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.mini-btn {
+    padding: 6px 14px;
+    font-size: 0.78rem;
+    border-radius: 8px;
+    cursor: pointer;
+    border: none;
+    font-weight: 600;
+    transition: all 0.2s ease;
+}
+
+/* --- The Branded Profile Card Canvas Architecture --- */
+.profile-card-canvas-bg {
+    width: 100%;
+    display: flex;
+    justify-content: center;
+    padding: 40px 20px;
+    border-radius: 16px;
+    border: 1px solid var(--border-color);
+    background-image: url('Profile_card_bg.png');
+    background-size: cover;
+    background-position: center;
+    background-repeat: no-repeat;
+    box-shadow: inset 0 0 40px rgba(0,0,0,0.6);
+}
+
+.profile-glass-card {
+    width: 100%;
+    max-width: 440px;
+    padding: 32px 24px;
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 24px;
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    text-align: center;
+    box-shadow: 0 20px 50px rgba(0, 0, 0, 0.4);
+}
+
+.card-logo {
+    font-family: 'Russo One', sans-serif;
+    font-size: 1.35rem;
+    letter-spacing: 0.06em;
+    color: #ffffff;
+    margin-bottom: 4px;
+}
+
+.card-timeline-label {
+    font-size: 0.78rem;
+    font-weight: 500;
+    text-transform: capitalize;
+    color: var(--text-muted);
+    margin-bottom: 16px;
+}
+
+.card-metrics-display {
+    font-size: 4rem;
+    font-weight: 700;
+    letter-spacing: -0.04em;
+    color: #ffffff;
+    line-height: 1.1;
+    margin-bottom: 16px;
+}
+
+.card-badge-container {
+    display: flex;
+    justify-content: center;
+    margin-bottom: 24px;
+}
+
+.card-badge-pill {
+    display: inline-block;
+    padding: 6px 20px;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    border-radius: 30px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: #ffffff;
+    box-shadow: inset 0 1px 0 rgba(255,255,255,0.1);
+}
+
+.card-quote-footer {
+    font-size: 0.72rem;
+    font-weight: 500;
+    line-height: 1.5;
+    color: var(--text-muted);
+    letter-spacing: 0.04em;
+}
+
 /* --- Real-time Visitor Counter Styling --- */
 .visitor-display-box {
     background-color: var(--btn-secondary-bg);
@@ -277,7 +373,9 @@ body {
 
 /* --- Left Side: Main Core Widget Styling --- */
 .widget-container {
-    width: 380px; padding: 36px; background-color: var(--card-bg); border: 3px solid var(--text-main); border-radius: 36px; box-shadow: 0 25px 50px rgba(0, 0, 0, 0.3); text-align: center; display: flex; flex-direction: column; justify-content: center; position: relative; overflow: hidden;
+    width: 380px; padding: 36px; background-color: var(--card-bg); border: 3px solid var(--text-main); border-radius: 36px; box-shadow: 0 25px 50px rgba(0, 0, 0, 0.3); text-align: center; display: flex; flex-direction: column; justify-content: center; position: relative;
+    /* STRICT CLIP BOUNDARY: Eliminates wheel numbers spilling down outside the card box */
+    overflow: hidden !important; 
 }
 
 /* --- Immersive Pop Trophy Celebration Overlays --- */
@@ -312,13 +410,19 @@ body {
     margin-bottom: 32px; 
     color: var(--text-main); 
     height: var(--row-height); 
-    overflow: hidden; 
+    
+    /* STRICT INNER MASK: Defends against wheel numbers displaying out of bounds */
+    overflow: hidden !important; 
 }
+
 .time-col { 
     width: 72px; 
     height: var(--row-height); 
     position: relative; 
+    /* ADDITIONAL FENCE: Enforces column containment cleanly */
+    overflow: hidden !important;
 }
+
 .digit-wheel { 
     position: absolute; 
     width: 100%; 
@@ -327,16 +431,19 @@ body {
     display: flex; 
     flex-direction: column; 
     align-items: center; 
-    justify-content: center; 
+    justify-content: flex-start; /* Corrected to align numbers perfectly at the top edge */
     transition: transform 0.45s cubic-bezier(0.23, 1, 0.32, 1); 
 }
+
 .digit-wheel div { 
     height: var(--row-height); 
+    width: 100%;
     display: flex; 
     align-items: center; 
     justify-content: center; 
     flex-shrink: 0; 
 }
+
 .colon { 
     height: var(--row-height); 
     display: flex; 
@@ -377,44 +484,22 @@ body.pip-mode .widget-container {
 }
 
 /* --- HEIGHT-BASED RESPONSIVE PROGRESSIVE BREAKPOINTS --- */
-/* Priorities ordered so buttons vanish absolute first when vertical space compresses */
 @media (max-height: 290px) {
-    .controls {
-        display: none !important; /* FIRST THING TO DISAPPEAR: Control button group drops immediately */
-    }
-    .widget-container {
-        padding-bottom: 12px;
-    }
+    .controls { display: none !important; }
+    .widget-container { padding-bottom: 12px; }
 }
-
 @media (max-height: 240px) {
-    .widget-header,
-    .widget-footer {
-        display: none !important; /* SECOND STEP: Logo headers and branding text disappear */
-    }
-    .timer-display {
-        margin-bottom: 12px;
-    }
+    .widget-header, .widget-footer { display: none !important; }
+    .timer-display { margin-bottom: 12px; }
 }
-
 @media (max-height: 175px) {
-    .task-space-container {
-        display: none !important; /* THIRD STEP: Editing text input box vanishes */
-    }
-    .timer-display {
-        margin-bottom: 0px; 
-    }
-    .state-indicator-row {
-        margin-bottom: 4px; /* Leaves exclusively the combined (Lockd in — task) line above clock tracks */
-    }
+    .task-space-container { display: none !important; }
+    .timer-display { margin-bottom: 0px; }
+    .state-indicator-row { margin-bottom: 4px; }
 }
-
 @media (max-height: 110px) {
-    .state-indicator-row {
-        display: none !important; /* FINAL BOUNDARY: Drops text layer, showing solely the raw scrolling clock digits */
-    }
+    .state-indicator-row { display: none !important; }
 }
-
 
 /* --- RESPONSIVE MEDIA QUERIES --- */
 @media (max-width: 768px) {
@@ -428,7 +513,6 @@ body.pip-mode .widget-container {
     .card-time { font-size: 1rem; }
     .card-unit { font-size: 0.55rem; }
 }
-
 @media (max-width: 420px) {
     :root { --row-height: 60px; }
     .timer-display { margin-bottom: 24px; }

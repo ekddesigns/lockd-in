@@ -34,6 +34,8 @@ const nextBtn = document.getElementById('nextBtn');
 const resetBtn = document.getElementById('resetBtn');
 const pipBtn = document.getElementById('pipBtn');
 const stateIndicator = document.getElementById('stateIndicator');
+const inlineTaskDisplay = document.getElementById('inlineTaskDisplay');
+const taskSpaceContainer = document.getElementById('taskSpaceContainer');
 const themeToggle = document.getElementById('themeToggle');
 const themeIcon = document.getElementById('themeIcon');
 const widget = document.getElementById('widget');
@@ -43,6 +45,7 @@ const barChartContainer = document.getElementById('barChartContainer');
 const chartTimelineSelector = document.getElementById('chartTimelineSelector');
 const widgetCelebrationOverlay = document.getElementById('widgetCelebrationOverlay');
 const globalVisitorCount = document.getElementById('globalVisitorCount');
+const taskInputField = document.getElementById('taskInputField');
 
 let resetClickCount = 0;
 let resetClickTimeout;
@@ -106,40 +109,48 @@ function updateRollingDisplay() {
     document.title = `(${hStr}:${mStr}:${sStr}) Lockd In`;
 }
 
-// --- TRUE GLOBAL CLOUD VISITOR COUNTER ENGINE ---
+// --- TRUE REAL-TIME GLOBAL CLOUD VISITOR COUNTER ENGINE ---
 async function processUniquePlatformVisits() {
     let hasBeenCounted = localStorage.getItem('lockdIn_countedOnPlatform');
     const workspaceKey = "ekddesigns_lockdin_workspace";
     const metricKey = "unique_builders_joined";
     
-    try {
-        let response;
-        if (!hasBeenCounted) {
-            response = await fetch(`https://api.counterapi.dev/v1/${workspaceKey}/${metricKey}/up`);
-            localStorage.setItem('lockdIn_countedOnPlatform', 'true');
-        } else {
-            response = await fetch(`https://api.counterapi.dev/v1/${workspaceKey}/${metricKey}`);
+    const fetchGlobalMetrics = async (incrementData = false) => {
+        try {
+            const url = incrementData 
+                ? `https://api.counterapi.dev/v1/${workspaceKey}/${metricKey}/up`
+                : `https://api.counterapi.dev/v1/${workspaceKey}/${metricKey}`;
+                
+            const response = await fetch(url);
+            const data = await response.json();
+            const globalTotal = data.count || 1;
+            
+            globalVisitorCount.textContent = globalTotal.toString().padStart(3, '0');
+            
+            if (globalTotal >= 100) {
+                triggerMegaMilestoneCelebration(globalTotal);
+            }
+        } catch (error) {
+            console.warn("Global network synchronization dropped.", error);
+            let fallbackSeed = parseInt(localStorage.getItem('lockdIn_networkTrafficSeed')) || 1;
+            if (incrementData) {
+                fallbackSeed++;
+                localStorage.setItem('lockdIn_networkTrafficSeed', fallbackSeed);
+            }
+            globalVisitorCount.textContent = fallbackSeed.toString().padStart(3, '0');
         }
-        
-        const data = await response.json();
-        const globalTotal = data.count || 1;
-        
-        globalVisitorCount.textContent = globalTotal.toString().padStart(3, '0');
-        
-        if (globalTotal >= 100) {
-            triggerMegaMilestoneCelebration(globalTotal);
-        }
-        
-    } catch (error) {
-        console.warn("Global database fetch error, processing local bypass context:", error);
-        let fallbackSeed = parseInt(localStorage.getItem('lockdIn_networkTrafficSeed')) || 1;
-        if (!hasBeenCounted) {
-            fallbackSeed++;
-            localStorage.setItem('lockdIn_networkTrafficSeed', fallbackSeed);
-            localStorage.setItem('lockdIn_countedOnPlatform', 'true');
-        }
-        globalVisitorCount.textContent = fallbackSeed.toString().padStart(3, '0');
+    };
+
+    if (!hasBeenCounted) {
+        await fetchGlobalMetrics(true);
+        localStorage.setItem('lockdIn_countedOnPlatform', 'true');
+    } else {
+        await fetchGlobalMetrics(false);
     }
+
+    setInterval(async () => {
+        await fetchGlobalMetrics(false);
+    }, 10000);
 }
 
 function triggerMegaMilestoneCelebration(count) {
@@ -289,13 +300,43 @@ function switchMode(wasGracefullyCompleted = true) {
     updateRollingDisplay();
 }
 
+// DYNAMIC TASK SPACE REFACTOR VISIBILITY CONTROLLER:
 function updateModeUIContext() {
+    const activeDocument = widget.ownerDocument || document;
+    const innerStartBtn = activeDocument.getElementById('startBtn') || startBtn;
+    const innerStateIndicator = activeDocument.getElementById('stateIndicator') || stateIndicator;
+    const innerInlineDisplay = activeDocument.getElementById('inlineTaskDisplay') || inlineTaskDisplay;
+    const innerTaskContainer = activeDocument.getElementById('taskSpaceContainer') || taskSpaceContainer;
+
+    const savedTaskText = localStorage.getItem('lockdIn_activeTaskGoal') || '';
+
+    // Header Mode Updates
+    if (innerStateIndicator) {
+        innerStateIndicator.textContent = currentMode === 'focus' ? "Lockd in" : "Resting";
+    }
+
     if (currentMode === 'focus') {
-        stateIndicator.textContent = "Lockd in";
-        startBtn.textContent = isRunning ? "Pause" : "Lock In";
+        if (innerStartBtn) innerStartBtn.textContent = isRunning ? "Pause" : "Start";
     } else {
-        stateIndicator.textContent = "Resting";
-        startBtn.textContent = isRunning ? "Pause" : "Start Rest";
+        if (innerStartBtn) innerStartBtn.textContent = isRunning ? "Pause" : "Start Rest";
+    }
+
+    // Task Space Disappearing & Inline Binding Engine
+    if (isRunning) {
+        // Timer counting -> Hide text write box area completely, render beside header text
+        if (innerTaskContainer) innerTaskContainer.style.display = 'none';
+        if (innerInlineDisplay) {
+            if (savedTaskText.trim() !== '') {
+                innerInlineDisplay.textContent = savedTaskText;
+                innerInlineDisplay.style.display = 'inline-block';
+            } else {
+                innerInlineDisplay.style.display = 'none';
+            }
+        }
+    } else {
+        // Timer paused -> Bring back write space box area cleanly, wipe upper display track
+        if (innerTaskContainer) innerTaskContainer.style.display = 'block';
+        if (innerInlineDisplay) innerInlineDisplay.style.display = 'none';
     }
 }
 
@@ -305,9 +346,9 @@ function tick() {
         localStorage.setItem('lockdIn_timeLeft', timeLeft); 
         updateRollingDisplay();
     } else {
-        clearInterval(timer);
-        isRunning = false;
+        // Continuous loop iteration transfer engine parameter
         switchMode(true);
+        toggleTimer(); 
     }
 }
 
@@ -320,7 +361,7 @@ function toggleTimer() {
     } else {
         timer = setInterval(tick, 1000);
         isRunning = true;
-        startBtn.textContent = "Pause";
+        updateModeUIContext();
         saveTimerStateToLocalStorage();
     }
 }
@@ -338,12 +379,8 @@ function goToNextInterval() {
 
 function triggerResetLogic() {
     resetClickCount++;
-    
     if (resetClickTimeout) clearTimeout(resetClickTimeout);
-
-    resetClickTimeout = setTimeout(() => {
-        resetClickCount = 0;
-    }, 2500);
+    resetClickTimeout = setTimeout(() => { resetClickCount = 0; }, 2500);
 
     if (resetClickCount === 1) {
         clearInterval(timer);
@@ -355,40 +392,51 @@ function triggerResetLogic() {
     } else if (resetClickCount === 3) {
         clearInterval(timer);
         isRunning = false;
-        
-        const countedToken = localStorage.getItem('lockdIn_countedOnPlatform');
-        localStorage.clear();
-        if (countedToken) localStorage.setItem('lockdIn_countedOnPlatform', countedToken);
-
-        currentMode = 'focus';
-        selectedFocusDuration = 180 * 60;
-        selectedRestDuration = 5 * 60;
-        timeLeft = selectedFocusDuration;
-        currentSessionTotalTarget = selectedFocusDuration;
-        totalTrophies = 0;
-        historicalLogsStack = [];
-
-        Object.keys(metricsDatabase).forEach(key => {
-            metricsDatabase[key].forEach(item => item.mins = 0);
-        });
-
-        saveTimerStateToLocalStorage();
-
-        document.querySelectorAll('.config-card').forEach(card => card.classList.remove('active'));
-        const defaultFocusCard = document.querySelector('#focusConfig .config-card[data-time="180"]');
-        const defaultRestCard = document.querySelector('#restConfig .config-card[data-time="5"]');
-        if (defaultFocusCard) defaultFocusCard.classList.add('active');
-        if (defaultRestCard) defaultRestCard.classList.add('active');
-
         updateModeUIContext();
-        updateRollingDisplay();
-        renderTrophiesUI();
-        renderLogsUI();
-        renderProductivityCharts();
-        processUniquePlatformVisits();
+        
+        const isUserCertain = confirm("Are you sure you want to hard reset your workspace? This will permanently wipe your metrics, logs, and achieved milestones.");
+        
+        if (isUserCertain) {
+            const countedToken = localStorage.getItem('lockdIn_countedOnPlatform');
+            localStorage.clear();
+            if (countedToken) localStorage.setItem('lockdIn_countedOnPlatform', countedToken);
 
-        resetClickCount = 0;
-        alert("WORKSPACE FULLY RESTORED");
+            currentMode = 'focus';
+            selectedFocusDuration = 180 * 60;
+            selectedRestDuration = 5 * 60;
+            timeLeft = selectedFocusDuration;
+            currentSessionTotalTarget = selectedFocusDuration;
+            totalTrophies = 0;
+            historicalLogsStack = [];
+
+            Object.keys(metricsDatabase).forEach(key => {
+                metricsDatabase[key].forEach(item => item.mins = 0);
+            });
+
+            saveTimerStateToLocalStorage();
+
+            document.querySelectorAll('.config-card').forEach(card => card.classList.remove('active'));
+            const defaultFocusCard = document.querySelector('#focusConfig .config-card[data-time="180"]');
+            const defaultRestCard = document.querySelector('#restConfig .config-card[data-time="5"]');
+            if (defaultFocusCard) defaultFocusCard.classList.add('active');
+            if (defaultRestCard) defaultRestCard.classList.add('active');
+            
+            const activeDocument = widget.ownerDocument || document;
+            const innerInputField = activeDocument.getElementById('taskInputField') || taskInputField;
+            if (innerInputField) innerInputField.value = '';
+
+            updateModeUIContext();
+            updateRollingDisplay();
+            renderTrophiesUI();
+            renderLogsUI();
+            renderProductivityCharts();
+            
+            resetClickCount = 0;
+        } else {
+            resetClickCount = 0;
+            recoverActiveTimerState();
+            updateRollingDisplay();
+        }
     }
 }
 
@@ -462,6 +510,12 @@ function setupConfigSelectors() {
         }
     });
 
+    taskInputField.value = localStorage.getItem('lockdIn_activeTaskGoal') || '';
+    taskInputField.addEventListener('input', (e) => {
+        localStorage.setItem('lockdIn_activeTaskGoal', e.target.value);
+        updateModeUIContext();
+    });
+
     chartTimelineSelector.addEventListener('change', renderProductivityCharts);
 }
 
@@ -488,6 +542,8 @@ async function togglePiP() {
     }
     if (window.documentPictureInPicture.window) return;
 
+    const currentCachedTask = localStorage.getItem('lockdIn_activeTaskGoal') || '';
+
     const pipWindow = await window.documentPictureInPicture.requestWindow({ width: 380, height: 350 });
 
     [...document.styleSheets].forEach((styleSheet) => {
@@ -506,11 +562,27 @@ async function togglePiP() {
     pipWindow.document.body.className = isLightMode ? 'light-mode pip-mode' : 'dark-mode pip-mode';
     pipWindow.document.body.appendChild(widget);
 
+    const pipStartBtn = pipWindow.document.getElementById('startBtn');
+    const pipTaskInput = pipWindow.document.getElementById('taskInputField');
+    
+    if (pipStartBtn) pipStartBtn.addEventListener('click', toggleTimer);
+    if (pipTaskInput) {
+        pipTaskInput.value = currentCachedTask;
+        pipTaskInput.addEventListener('input', (e) => {
+            localStorage.setItem('lockdIn_activeTaskGoal', e.target.value);
+            taskInputField.value = e.target.value; // Mirror back to desktop window channel parameters safely
+            updateModeUIContext();
+        });
+    }
+
     setTimeout(updateRollingDisplay, 100);
 
     pipWindow.addEventListener('pagehide', () => {
         const workspace = document.querySelector('.upper-control-station');
         workspace.insertBefore(widget, workspace.firstChild);
+        
+        taskInputField.value = localStorage.getItem('lockdIn_activeTaskGoal') || '';
+        updateModeUIContext();
         updateRollingDisplay();
     });
 }

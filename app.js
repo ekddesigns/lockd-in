@@ -109,7 +109,7 @@ function updateRollingDisplay() {
     document.title = `(${hStr}:${mStr}:${sStr}) Lockd In`;
 }
 
-// --- TRUE REAL-TIME GLOBAL CLOUD VISITOR COUNTER ENGINE ---
+// --- FIXED TRUE REAL-TIME GLOBAL CLOUD VISITOR COUNTER ENGINE ---
 async function processUniquePlatformVisits() {
     let hasBeenCounted = localStorage.getItem('lockdIn_countedOnPlatform');
     const workspaceKey = "ekddesigns_lockdin_workspace";
@@ -125,7 +125,12 @@ async function processUniquePlatformVisits() {
             const data = await response.json();
             const globalTotal = data.count || 1;
             
-            globalVisitorCount.textContent = globalTotal.toString().padStart(3, '0');
+            // Updates counter fields inside active document views seamlessly
+            const activeDocument = widget.ownerDocument || document;
+            const currentCounterNode = activeDocument.getElementById('globalVisitorCount') || globalVisitorCount;
+            if (currentCounterNode) {
+                currentCounterNode.textContent = globalTotal.toString().padStart(3, '0');
+            }
             
             if (globalTotal >= 100) {
                 triggerMegaMilestoneCelebration(globalTotal);
@@ -137,7 +142,11 @@ async function processUniquePlatformVisits() {
                 fallbackSeed++;
                 localStorage.setItem('lockdIn_networkTrafficSeed', fallbackSeed);
             }
-            globalVisitorCount.textContent = fallbackSeed.toString().padStart(3, '0');
+            const activeDocument = widget.ownerDocument || document;
+            const currentCounterNode = activeDocument.getElementById('globalVisitorCount') || globalVisitorCount;
+            if (currentCounterNode) {
+                currentCounterNode.textContent = fallbackSeed.toString().padStart(3, '0');
+            }
         }
     };
 
@@ -145,9 +154,10 @@ async function processUniquePlatformVisits() {
         await fetchGlobalMetrics(true);
         localStorage.setItem('lockdIn_countedOnPlatform', 'true');
     } else {
-        await fetchGlobalMetrics(false);
+        await fetchGlobalMetrics(false); 
     }
 
+    // Dynamic polling loops update records live
     setInterval(async () => {
         await fetchGlobalMetrics(false);
     }, 10000);
@@ -300,7 +310,6 @@ function switchMode(wasGracefullyCompleted = true) {
     updateRollingDisplay();
 }
 
-// CRITICAL MEMORY RESTORATION FIX:
 function updateModeUIContext() {
     const activeDocument = widget.ownerDocument || document;
     const innerStartBtn = activeDocument.getElementById('startBtn') || startBtn;
@@ -520,7 +529,7 @@ function applyLoadedTheme() {
         themeIcon.innerHTML = `<path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>`;
     } else {
         document.body.classList.replace('light-mode', 'dark-mode');
-        themeIcon.innerHTML = `<circle cx="12" cy="12" r="5"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/>`;
+        themeIcon.innerHTML = `<circle cx="12" cy="12" r="5"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2+M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/>`;
     }
 }
 
@@ -557,10 +566,15 @@ async function togglePiP() {
     pipWindow.document.body.className = isLightMode ? 'light-mode pip-mode' : 'dark-mode pip-mode';
     pipWindow.document.body.appendChild(widget);
 
+    // Re-attach triggers to look into PiP context variables
     const pipStartBtn = pipWindow.document.getElementById('startBtn');
+    const pipNextBtn = pipWindow.document.getElementById('nextBtn');
+    const pipResetBtn = pipWindow.document.getElementById('resetBtn');
     const pipTaskInput = pipWindow.document.getElementById('taskInputField');
     
     if (pipStartBtn) pipStartBtn.addEventListener('click', toggleTimer);
+    if (pipNextBtn) pipNextBtn.addEventListener('click', goToNextInterval);
+    if (pipResetBtn) pipResetBtn.addEventListener('click', triggerResetLogic);
     if (pipTaskInput) {
         pipTaskInput.value = currentCachedTask;
         pipTaskInput.addEventListener('input', (e) => {

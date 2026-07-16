@@ -300,7 +300,7 @@ function switchMode(wasGracefullyCompleted = true) {
     updateRollingDisplay();
 }
 
-// DYNAMIC TASK SPACE REFACTOR VISIBILITY CONTROLLER:
+// CRITICAL MEMORY RESTORATION FIX:
 function updateModeUIContext() {
     const activeDocument = widget.ownerDocument || document;
     const innerStartBtn = activeDocument.getElementById('startBtn') || startBtn;
@@ -310,7 +310,6 @@ function updateModeUIContext() {
 
     const savedTaskText = localStorage.getItem('lockdIn_activeTaskGoal') || '';
 
-    // Header Mode Updates
     if (innerStateIndicator) {
         innerStateIndicator.textContent = currentMode === 'focus' ? "Lockd in" : "Resting";
     }
@@ -321,9 +320,7 @@ function updateModeUIContext() {
         if (innerStartBtn) innerStartBtn.textContent = isRunning ? "Pause" : "Start Rest";
     }
 
-    // Task Space Disappearing & Inline Binding Engine
     if (isRunning) {
-        // Timer counting -> Hide text write box area completely, render beside header text
         if (innerTaskContainer) innerTaskContainer.style.display = 'none';
         if (innerInlineDisplay) {
             if (savedTaskText.trim() !== '') {
@@ -334,7 +331,6 @@ function updateModeUIContext() {
             }
         }
     } else {
-        // Timer paused -> Bring back write space box area cleanly, wipe upper display track
         if (innerTaskContainer) innerTaskContainer.style.display = 'block';
         if (innerInlineDisplay) innerInlineDisplay.style.display = 'none';
     }
@@ -346,7 +342,6 @@ function tick() {
         localStorage.setItem('lockdIn_timeLeft', timeLeft); 
         updateRollingDisplay();
     } else {
-        // Continuous loop iteration transfer engine parameter
         switchMode(true);
         toggleTimer(); 
     }
@@ -570,7 +565,7 @@ async function togglePiP() {
         pipTaskInput.value = currentCachedTask;
         pipTaskInput.addEventListener('input', (e) => {
             localStorage.setItem('lockdIn_activeTaskGoal', e.target.value);
-            taskInputField.value = e.target.value; // Mirror back to desktop window channel parameters safely
+            taskInputField.value = e.target.value; 
             updateModeUIContext();
         });
     }

@@ -18,7 +18,7 @@
     --status-success: #10b981;
     --status-fail: #ef4444;
     
-    /* Base kinetic wheel slot height metrics */
+    /* Strict rolling wheel constraint parameter handles */
     --row-height: 80px;
 }
 
@@ -247,6 +247,16 @@ body {
     background-position: center;
     background-repeat: no-repeat;
     box-shadow: inset 0 0 40px rgba(0,0,0,0.6);
+    position: relative;
+    overflow: hidden;
+}
+
+.profile-card-canvas-bg::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: rgba(5, 5, 6, 0.35);
+    pointer-events: none;
 }
 
 .profile-glass-card {
@@ -275,7 +285,18 @@ body {
     font-weight: 500;
     text-transform: capitalize;
     color: var(--text-muted);
-    margin-bottom: 16px;
+    margin-bottom: 8px;
+}
+
+.card-active-task {
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: var(--accent-color);
+    margin-bottom: 24px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    opacity: 0.9;
 }
 
 .card-metrics-display {
@@ -361,6 +382,7 @@ body {
 .log-table th, .log-table td { padding: 12px 16px; border-bottom: 1px solid var(--border-color); }
 .log-table th { background-color: var(--card-bg); color: var(--text-muted); font-weight: 600; position: sticky; top: 0; font-size: 0.72rem; text-transform: uppercase; }
 .log-table tr:last-child td { border-bottom: none; }
+.log-table td:nth-child(4) { max-width: 160px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .empty-row-notice { text-align: center; color: var(--text-muted); }
 .status-tag { font-weight: 600; font-size: 0.72rem; text-transform: uppercase; }
 .status-tag.complete { color: var(--status-success); }
@@ -385,7 +407,23 @@ body {
 .light-mode .trophy-celebration-overlay { background-color: rgba(255, 255, 255, 0.92); }
 .trophy-celebration-overlay.celebrate-active { opacity: 1; transform: scale(1); pointer-events: auto; }
 
-.widget-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; }
+.widget-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; gap: 8px; }
+
+.streak-badge {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 0.78rem;
+    font-weight: 700;
+    color: var(--text-main);
+    background-color: var(--btn-secondary-bg);
+    border: 1px solid var(--border-color);
+    padding: 4px 12px;
+    border-radius: 20px;
+    line-height: 1;
+}
+.streak-flame { font-size: 0.95rem; line-height: 1; }
+.streak-count { line-height: 1; }
 
 .app-logo { 
     font-family: 'Russo One', sans-serif;
@@ -416,7 +454,7 @@ body {
 }
 
 .time-col { 
-    width: 72px; 
+    width: 1.35em; 
     height: var(--row-height); 
     position: relative; 
     /* ADDITIONAL FENCE: Enforces column containment cleanly */
@@ -431,8 +469,8 @@ body {
     display: flex; 
     flex-direction: column; 
     align-items: center; 
-    justify-content: flex-start; /* Corrected to align numbers perfectly at the top edge */
-    transition: transform 0.45s cubic-bezier(0.23, 1, 0.32, 1); 
+    justify-content: flex-start; /* Aligns strictly from top */
+    transition: none; /* Countdown updates instantly, no rolling/sliding animation */
 }
 
 .digit-wheel div { 
@@ -442,6 +480,7 @@ body {
     align-items: center; 
     justify-content: center; 
     flex-shrink: 0; 
+    line-height: 1; /* Eliminates vertical font-padding cropping issues */
 }
 
 .colon { 
@@ -450,6 +489,7 @@ body {
     align-items: center; 
     padding-bottom: 8px; 
     color: var(--text-main); 
+    line-height: 1;
 }
 
 /* --- Controls Buttons --- */
@@ -482,23 +522,32 @@ body.pip-mode .widget-container {
     box-shadow: none; 
     padding: 12px; 
 }
+body.pip-mode .widget-header { margin-bottom: 14px; }
+body.pip-mode .state-indicator-row { margin-bottom: 8px; }
+body.pip-mode .timer-display { margin-bottom: 18px; }
+body.pip-mode .task-space-container { margin-bottom: 16px; }
+body.pip-mode .controls { margin-bottom: 16px; }
 
 /* --- HEIGHT-BASED RESPONSIVE PROGRESSIVE BREAKPOINTS --- */
+/* Order of Removal: 1. Logo, 2. Footer, 3. Buttons, 4. Status/Task */
+
 @media (max-height: 290px) {
-    .controls { display: none !important; }
+    .widget-header { display: none !important; } /* Removes Logo & PiP Icon */
+}
+
+@media (max-height: 250px) {
+    .widget-footer { display: none !important; } /* Removes "Lockd in by @ekddesigns" */
     .widget-container { padding-bottom: 12px; }
 }
-@media (max-height: 240px) {
-    .widget-header, .widget-footer { display: none !important; }
-    .timer-display { margin-bottom: 12px; }
+
+@media (max-height: 200px) {
+    .controls, .task-space-container { display: none !important; } /* Removes Action Buttons & Input Area */
+    .timer-display { margin-bottom: 8px; }
 }
-@media (max-height: 175px) {
-    .task-space-container { display: none !important; }
+
+@media (max-height: 140px) {
+    .state-indicator-row { display: none !important; } /* Removes Lockd in - Task Name text */
     .timer-display { margin-bottom: 0px; }
-    .state-indicator-row { margin-bottom: 4px; }
-}
-@media (max-height: 110px) {
-    .state-indicator-row { display: none !important; }
 }
 
 /* --- RESPONSIVE MEDIA QUERIES --- */
@@ -516,5 +565,4 @@ body.pip-mode .widget-container {
 @media (max-width: 420px) {
     :root { --row-height: 60px; }
     .timer-display { margin-bottom: 24px; }
-    .time-col { width: 56px; }
 }

@@ -330,7 +330,7 @@ function updateRollingDisplay() {
 // --- TRUE REAL-TIME SUPABASE VISITOR COUNTER ENGINE ---
 async function processUniquePlatformVisits() {
     // ⚠️ PASTE YOUR SUPABASE CREDENTIALS HERE:
-    const SUPABASE_URL = "https://zxapffpiompclejufjic.supabase.co/rest/v1/"; 
+    const SUPABASE_URL = "https://zxapffpiompclejufjic.supabase.co";
     const SUPABASE_ANON_KEY = "sb_secret_3dg4hKL_HQMKOyAtXMSIYA_UBI0j1ED";
 
     let hasBeenCounted = localStorage.getItem('lockdIn_countedOnPlatform');
@@ -933,7 +933,7 @@ function applyLoadedTheme() {
         themeIcon.innerHTML = `<path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>`;
     } else {
         document.body.classList.replace('light-mode', 'dark-mode');
-        themeIcon.innerHTML = `<circle cx="12" cy="12" r="5"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2+M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/>`;
+        themeIcon.innerHTML = `<circle cx="12" cy="12" r="5"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/>`;
     }
 }
 

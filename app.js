@@ -18,23 +18,132 @@ let timeLeft = isNaN(storedTime) ? selectedFocusDuration : storedTime;
 let storedTarget = parseInt(localStorage.getItem('lockdIn_totalTarget'));
 let currentSessionTotalTarget = isNaN(storedTarget) ? selectedFocusDuration : storedTarget;
 
-let totalTrophies = parseInt(localStorage.getItem('lockdIn_trophyCount')) || 0;
 let historicalLogsStack = JSON.parse(localStorage.getItem('lockdIn_terminalLogs')) || [];
 
-const metricsDatabase = JSON.parse(localStorage.getItem('lockdIn_metricsDatabase')) || {
+// Database Schema: tracks mins and trophies for daily, weekly, monthly
+let metricsDatabase = JSON.parse(localStorage.getItem('lockdIn_metricsDatabase')) || {
     daily: [
-        { label: 'Sun', mins: 0 }, { label: 'Mon', mins: 0 }, { label: 'Tue', mins: 0 },
-        { label: 'Wed', mins: 0 }, { label: 'Thu', mins: 0 }, { label: 'Fri', mins: 0 }, { label: 'Sat', mins: 0 }
+        { label: 'Sun', mins: 0, trophies: 0 }, { label: 'Mon', mins: 0, trophies: 0 }, { label: 'Tue', mins: 0, trophies: 0 },
+        { label: 'Wed', mins: 0, trophies: 0 }, { label: 'Thu', mins: 0, trophies: 0 }, { label: 'Fri', mins: 0, trophies: 0 }, { label: 'Sat', mins: 0, trophies: 0 }
     ],
     weekly: [
-        { label: 'Wk 1', mins: 0 }, { label: 'Wk 2', mins: 0 }, { label: 'Wk 3', mins: 0 },
-        { label: 'Wk 4', mins: 0 }, { label: 'Wk 5', mins: 0 }
+        { label: 'Wk 1', mins: 0, trophies: 0 }, { label: 'Wk 2', mins: 0, trophies: 0 }, { label: 'Wk 3', mins: 0, trophies: 0 },
+        { label: 'Wk 4', mins: 0, trophies: 0 }, { label: 'Wk 5', mins: 0, trophies: 0 }
     ],
-    monthly: [
-        { label: 'Jan', mins: 0 }, { label: 'Feb', mins: 0 }, { label: 'Mar', mins: 0 },
-        { label: 'Apr', mins: 0 }, { label: 'May', mins: 0 }
-    ]
+    monthly: ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'].map(label => ({ label, mins: 0, trophies: 0 }))
 };
+
+// SCHEMA MIGRATION: older saved data only had 5 fixed monthly slots (Jan-May) and
+// was never actually written to, which is why monthly totals never calculated.
+// Upgrade any existing localStorage data to the full real 12-month schema.
+if (!Array.isArray(metricsDatabase.monthly) || metricsDatabase.monthly.length !== 12) {
+    metricsDatabase.monthly = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'].map(label => ({ label, mins: 0, trophies: 0 }));
+    localStorage.setItem('lockdIn_metricsDatabase', JSON.stringify(metricsDatabase));
+}
+
+// ONE-TIME BACKFILL: before this fix, monthly minutes/trophies were never written to at
+// all, and weekly minutes were always funneled into a single hardcoded slot regardless of
+// the real week. That old weekly total is the closest available record of real focus time
+// already earned, so fold it into the current month's bucket once, then never touch it again.
+if (!localStorage.getItem('lockdIn_monthlyBackfillDone')) {
+    const currentMonthIdx = new Date().getMonth();
+    const legacyMins = metricsDatabase.weekly.reduce((sum, w) => sum + (w.mins || 0), 0);
+    const legacyTrophies = metricsDatabase.weekly.reduce((sum, w) => sum + (w.trophies || 0), 0);
+
+    if (legacyMins > 0) {
+        metricsDatabase.monthly[currentMonthIdx].mins += legacyMins;
+        metricsDatabase.monthly[currentMonthIdx].trophies += legacyTrophies;
+        localStorage.setItem('lockdIn_metricsDatabase', JSON.stringify(metricsDatabase));
+    }
+    localStorage.setItem('lockdIn_monthlyBackfillDone', 'true');
+}
+
+// --- Real-Calendar Index Helpers (used to keep daily/weekly/monthly buckets accurate) ---
+function getCurrentDayIndex(dateObj = new Date()) { return dateObj.getDay(); }
+function getCurrentWeekIndex(dateObj = new Date()) { return Math.min(4, Math.floor((dateObj.getDate() - 1) / 7)); }
+function getCurrentMonthIndex(dateObj = new Date()) { return dateObj.getMonth(); }
+
+// Check for a new day to handle the strict "Today's Milestones" logic
+function verifyDailyReset() {
+    const now = new Date();
+    const todayStr = now.toDateString();
+    const storedDate = localStorage.getItem('lockdIn_lastDate');
+
+    if (storedDate !== todayStr) {
+        const prevDate = storedDate ? new Date(storedDate) : null;
+
+        // Only wipe TODAY's weekday bucket so "Today's Milestones" is always fresh,
+        // while the rest of the week stays intact for the Productivity Metric Chart
+        const todayIdx = getCurrentDayIndex(now);
+        metricsDatabase.daily[todayIdx].mins = 0;
+        metricsDatabase.daily[todayIdx].trophies = 0;
+
+        // Guard: if we've rolled into a new month, the week-of-month index will be
+        // reused (e.g. index 0 again) — wipe it first so it doesn't inherit last month's total
+        if (!prevDate || prevDate.getMonth() !== now.getMonth() || prevDate.getFullYear() !== now.getFullYear()) {
+            const weekIdx = getCurrentWeekIndex(now);
+            metricsDatabase.weekly[weekIdx].mins = 0;
+            metricsDatabase.weekly[weekIdx].trophies = 0;
+        }
+
+        // Guard: if we've rolled into a new year, wipe this month's bucket so it
+        // doesn't inherit last year's total for the same month
+        if (!prevDate || prevDate.getFullYear() !== now.getFullYear()) {
+            const monthIdx = getCurrentMonthIndex(now);
+            metricsDatabase.monthly[monthIdx].mins = 0;
+            metricsDatabase.monthly[monthIdx].trophies = 0;
+        }
+
+        localStorage.setItem('lockdIn_lastDate', todayStr);
+        localStorage.setItem('lockdIn_metricsDatabase', JSON.stringify(metricsDatabase));
+    }
+}
+verifyDailyReset(); // Verify on boot
+
+// --- Streak Tracking (same date-check pattern as verifyDailyReset) ---
+// A streak day counts once at least one focus session completes gracefully that day.
+function renderStreakUI() {
+    const activeDocument = widget.ownerDocument || document;
+    const targetEl = activeDocument.getElementById('streakCount') || streakCountEl;
+    if (targetEl) {
+        targetEl.textContent = parseInt(localStorage.getItem('lockdIn_streakCount')) || 0;
+    }
+}
+
+// Detects a missed day (opened the app, but no session was completed yesterday or today)
+// and visually resets the streak to 0 without waiting for the next session to complete.
+function verifyStreakIntegrity() {
+    const todayStr = new Date().toDateString();
+    const lastStreakDate = localStorage.getItem('lockdIn_lastStreakDate');
+
+    if (lastStreakDate && lastStreakDate !== todayStr) {
+        const yesterday = new Date();
+        yesterday.setDate(yesterday.getDate() - 1);
+        if (lastStreakDate !== yesterday.toDateString()) {
+            localStorage.setItem('lockdIn_streakCount', 0);
+            localStorage.removeItem('lockdIn_lastStreakDate');
+        }
+    }
+    renderStreakUI();
+}
+
+// Call this the moment a focus session completes gracefully to advance/continue/reset the streak
+function updateStreakOnCompletion() {
+    const todayStr = new Date().toDateString();
+    const lastStreakDate = localStorage.getItem('lockdIn_lastStreakDate');
+
+    if (lastStreakDate !== todayStr) {
+        let streak = parseInt(localStorage.getItem('lockdIn_streakCount')) || 0;
+        const yesterday = new Date();
+        yesterday.setDate(yesterday.getDate() - 1);
+
+        streak = (lastStreakDate === yesterday.toDateString()) ? streak + 1 : 1;
+
+        localStorage.setItem('lockdIn_streakCount', streak);
+        localStorage.setItem('lockdIn_lastStreakDate', todayStr);
+    }
+    renderStreakUI();
+}
 
 // --- DOM Cache Elements ---
 const startBtn = document.getElementById('startBtn');
@@ -54,11 +163,13 @@ const chartTimelineSelector = document.getElementById('chartTimelineSelector');
 const widgetCelebrationOverlay = document.getElementById('widgetCelebrationOverlay');
 const globalVisitorCount = document.getElementById('globalVisitorCount');
 const taskInputField = document.getElementById('taskInputField');
+const streakCountEl = document.getElementById('streakCount');
 
 // Profile Card Elements
 const downloadCardBtn = document.getElementById('downloadCardBtn');
 const cardTimelineSelector = document.querySelector('.profile-card-section #cardTimelineSelector');
 const cardTimelineLabel = document.getElementById('cardTimelineLabel');
+const cardActiveTask = document.getElementById('cardActiveTask');
 const cardMetricsDisplay = document.getElementById('cardMetricsDisplay');
 const cardTrophyBadge = document.getElementById('cardTrophyBadge');
 const profileCardCanvasFrame = document.getElementById('profileCardCanvasFrame');
@@ -66,8 +177,98 @@ const profileCardCanvasFrame = document.getElementById('profileCardCanvasFrame')
 let resetClickCount = 0;
 let resetClickTimeout;
 
-const focusEndSound = document.getElementById('focusEndSound');
-const restEndSound = document.getElementById('restEndSound');
+// --- Self-Contained Notification Chime Engine (Web Audio API) ---
+// Replaces the old external Mixkit <audio> files, whose URLs used an invalid
+// path format and would silently 404, so no sound ever played. Generating the
+// tones locally means notifications always work, with zero network dependency.
+let audioCtx = null;
+
+function warmUpAudio() {
+    try {
+        if (!audioCtx) {
+            const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+            if (AudioContextClass) audioCtx = new AudioContextClass();
+        }
+        if (audioCtx && audioCtx.state === 'suspended') {
+            audioCtx.resume();
+        }
+    } catch (e) {
+        console.log('Audio warm-up error:', e);
+    }
+}
+
+function playCompletionChime(type) {
+    try {
+        warmUpAudio();
+        if (!audioCtx) return;
+        const now = audioCtx.currentTime;
+        // Focus-complete: bright ascending 3-note chime. Rest-complete: soft 2-note descending tone.
+        const notes = type === 'focus' ? [784, 988, 1244] : [523, 392];
+        notes.forEach((freq, i) => {
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+            osc.type = 'sine';
+            osc.frequency.value = freq;
+            const start = now + i * 0.16;
+            gain.gain.setValueAtTime(0.0001, start);
+            gain.gain.linearRampToValueAtTime(0.3, start + 0.02);
+            gain.gain.exponentialRampToValueAtTime(0.0001, start + 0.35);
+            osc.connect(gain);
+            gain.connect(audioCtx.destination);
+            osc.start(start);
+            osc.stop(start + 0.4);
+        });
+    } catch (e) {
+        console.log('Audio error:', e);
+    }
+}
+
+// Plays when a session actually BEGINS (Start / Start Rest / Resume pressed) — deliberately
+// different in character from the completion chimes above so start and finish never sound alike
+function playStartChime(mode) {
+    try {
+        warmUpAudio();
+        if (!audioCtx) return;
+        const now = audioCtx.currentTime;
+
+        if (mode === 'focus') {
+            // Crisp, confident double-blip — "locking in"
+            [660, 880].forEach((freq, i) => {
+                const osc = audioCtx.createOscillator();
+                const gain = audioCtx.createGain();
+                osc.type = 'square';
+                osc.frequency.value = freq;
+                const start = now + i * 0.09;
+                gain.gain.setValueAtTime(0.0001, start);
+                gain.gain.linearRampToValueAtTime(0.18, start + 0.015);
+                gain.gain.exponentialRampToValueAtTime(0.0001, start + 0.11);
+                osc.connect(gain);
+                gain.connect(audioCtx.destination);
+                osc.start(start);
+                osc.stop(start + 0.13);
+            });
+        } else {
+            // Single mellow, slow-fading tone — "settling into rest"
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+            osc.type = 'sine';
+            osc.frequency.value = 349.23; // F4
+            gain.gain.setValueAtTime(0.0001, now);
+            gain.gain.linearRampToValueAtTime(0.22, now + 0.08);
+            gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.9);
+            osc.connect(gain);
+            gain.connect(audioCtx.destination);
+            osc.start(now);
+            osc.stop(now + 1);
+        }
+    } catch (e) {
+        console.log('Audio error:', e);
+    }
+}
+
+// AUDIO UNLOCKER: Warms up the audio context upon first screen interaction so
+// later programmatic playback (from setInterval-driven session completions) is allowed
+document.body.addEventListener('click', warmUpAudio, { once: true });
 
 const hoursWheel = document.getElementById('hoursWheel');
 const minsWheel = document.getElementById('minsWheel');
@@ -109,7 +310,6 @@ function getRowHeight() {
 }
 
 function updateRollingDisplay() {
-    // Failsafe: Ensures math strictly never calculates backwards/negative pixel matrices 
     const safeTimeLeft = Math.max(timeLeft, 0);
     const hours = Math.floor(safeTimeLeft / 3600);
     const minutes = Math.floor((safeTimeLeft % 3600) / 60);
@@ -127,12 +327,15 @@ function updateRollingDisplay() {
     document.title = `(${hStr}:${mStr}:${sStr}) Lockd In`;
 }
 
-// --- TRUE REAL-TIME GLOBAL CLOUD VISITOR COUNTER ENGINE ---
+// --- TRUE REAL-TIME SUPABASE VISITOR COUNTER ENGINE ---
 async function processUniquePlatformVisits() {
-    let hasBeenCounted = localStorage.getItem('lockdIn_countedOnPlatform');
-    const workspaceKey = "ekddesigns_lockdin_workspace";
-    const metricKey = "unique_builders_joined";
+    // ⚠️ PASTE YOUR SUPABASE CREDENTIALS HERE:
+    const SUPABASE_URL = "https://zxapffpiompclejufjic.supabase.co/rest/v1/"; 
+    const SUPABASE_ANON_KEY = "sb_secret_3dg4hKL_HQMKOyAtXMSIYA_UBI0j1ED";
 
+    let hasBeenCounted = localStorage.getItem('lockdIn_countedOnPlatform');
+
+    // Display locally cached count instantly so UI doesn't look empty while fetching
     const cachedCount = parseInt(localStorage.getItem('lockdIn_lastKnownCount'));
     if (!isNaN(cachedCount) && cachedCount > 0) {
         const activeDocument = widget.ownerDocument || document;
@@ -144,14 +347,44 @@ async function processUniquePlatformVisits() {
 
     const fetchGlobalMetrics = async (incrementData = false) => {
         try {
-            const url = incrementData
-                ? `https://api.counterapi.dev/v1/${workspaceKey}/${metricKey}/up`
-                : `https://api.counterapi.dev/v1/${workspaceKey}/${metricKey}`;
+            let url, options;
 
-            const response = await fetch(url);
+            if (incrementData) {
+                // Trigger the secure SQL function to add +1
+                url = `${SUPABASE_URL}/rest/v1/rpc/increment_counter`;
+                options = {
+                    method: 'POST',
+                    headers: {
+                        'apikey': SUPABASE_ANON_KEY,
+                        'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+                        'Content-Type': 'application/json'
+                    }
+                };
+            } else {
+                // Just read the current count securely
+                url = `${SUPABASE_URL}/rest/v1/global_counter?id=eq.1&select=count`;
+                options = {
+                    method: 'GET',
+                    headers: {
+                        'apikey': SUPABASE_ANON_KEY,
+                        'Authorization': `Bearer ${SUPABASE_ANON_KEY}`
+                    }
+                };
+            }
+
+            const response = await fetch(url, options);
             const data = await response.json();
-            const globalTotal = data.count || 1;
+            
+            let globalTotal = 1;
+            
+            // Supabase returns data differently based on if we used a Function (POST) or a Table Read (GET)
+            if (incrementData) {
+                globalTotal = data; 
+            } else {
+                globalTotal = data[0] ? data[0].count : 1; 
+            }
 
+            // Sync the true server value locally
             localStorage.setItem('lockdIn_lastKnownCount', globalTotal);
 
             const activeDocument = widget.ownerDocument || document;
@@ -160,11 +393,13 @@ async function processUniquePlatformVisits() {
                 currentCounterNode.textContent = globalTotal.toString().padStart(3, '0');
             }
 
-            if (globalTotal >= 100) {
+            // Fire the celebration if they hit the threshold and are triggering a new +1
+            if (globalTotal >= 10 && incrementData) {
                 triggerMegaMilestoneCelebration(globalTotal);
             }
         } catch (error) {
-            console.warn("Global network synchronization dropped.", error);
+            console.warn("Global Supabase network synchronization dropped.", error);
+            // Fallback logic keeps numbers stable if user loses internet connection
             const lastKnown = parseInt(localStorage.getItem('lockdIn_lastKnownCount'));
             if (!isNaN(lastKnown) && lastKnown > 0) {
                 const activeDocument = widget.ownerDocument || document;
@@ -177,12 +412,15 @@ async function processUniquePlatformVisits() {
     };
 
     if (!hasBeenCounted) {
+        // Brand new visitor: Increment the database by +1
         await fetchGlobalMetrics(true);
         localStorage.setItem('lockdIn_countedOnPlatform', 'true');
     } else {
+        // Returning visitor: Just pull the current absolute total
         await fetchGlobalMetrics(false);
     }
 
+    // Ping the Supabase server every 60 seconds to silently grab new joins while running
     setInterval(async () => {
         await fetchGlobalMetrics(false);
     }, 60000);
@@ -202,7 +440,12 @@ function triggerMegaMilestoneCelebration(count) {
 function commitLogToTerminal(type, targetDurationSeconds, completedOption, isPreloaded = false) {
     if (!isPreloaded && type !== null) {
         const timestamp = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
-        const logEntry = { timestamp, type, targetDurationSeconds, completedOption };
+        
+        // Push the active task directly into the telemetry object logs if it's a work sequence
+        const activeTaskCache = localStorage.getItem('lockdIn_activeTaskGoal') || '';
+        const taskText = type === 'focus' ? (activeTaskCache.trim() !== '' ? activeTaskCache : '-') : '-';
+        
+        const logEntry = { timestamp, type, targetDurationSeconds, completedOption, task: taskText };
         historicalLogsStack.unshift(logEntry);
         localStorage.setItem('lockdIn_terminalLogs', JSON.stringify(historicalLogsStack));
     }
@@ -214,6 +457,7 @@ function renderProfileCardData() {
     const activeDocument = widget.ownerDocument || document;
     const innerSelector = activeDocument.getElementById('cardTimelineSelector') || cardTimelineSelector;
     const innerLabel = activeDocument.getElementById('cardTimelineLabel') || cardTimelineLabel;
+    const innerTask = activeDocument.getElementById('cardActiveTask') || cardActiveTask;
     const innerDisplay = activeDocument.getElementById('cardMetricsDisplay') || cardMetricsDisplay;
     const innerBadge = activeDocument.getElementById('cardTrophyBadge') || cardTrophyBadge;
 
@@ -222,19 +466,24 @@ function renderProfileCardData() {
     const timelineKey = innerSelector.value; 
     const items = metricsDatabase[timelineKey];
 
-    let totalMinutes = 0;
-    if (timelineKey === 'daily') {
-        const currentDayIndex = new Date().getDay();
-        totalMinutes = items[currentDayIndex].mins;
-    } else {
-        totalMinutes = items.reduce((sum, current) => sum + current.mins, 0);
-    }
+    // Show the CURRENT bucket for whichever period is selected — matching "Today's
+    // Milestones" behavior for daily, and naturally resetting when a new week/month begins
+    let currentIdx;
+    if (timelineKey === 'daily') currentIdx = getCurrentDayIndex();
+    else if (timelineKey === 'weekly') currentIdx = getCurrentWeekIndex();
+    else currentIdx = getCurrentMonthIndex();
+
+    const totalMinutes = items[currentIdx].mins || 0;
+    const localTotalTrophies = items[currentIdx].trophies || 0;
 
     const totalHours = (totalMinutes / 60).toFixed(1);
+    
+    const activeTaskString = localStorage.getItem('lockdIn_activeTaskGoal') || '';
 
     if (innerLabel) innerLabel.textContent = `${timelineKey.charAt(0).toUpperCase() + timelineKey.slice(1)} Focus`;
+    if (innerTask) innerTask.textContent = activeTaskString.trim() !== '' ? activeTaskString : "No active task";
     innerDisplay.textContent = `${totalHours} hrs`;
-    if (innerBadge) innerBadge.textContent = `${totalTrophies} Trophies 🏆`;
+    if (innerBadge) innerBadge.textContent = `${localTotalTrophies} Trophies 🏆`;
 }
 
 // --- html2canvas Core Image Generation Downloader Engine ---
@@ -242,10 +491,16 @@ async function downloadProfileCardAsJpg() {
     renderProfileCardData();
     try {
         const canvas = await html2canvas(profileCardCanvasFrame, {
-            scale: 2, 
-            backgroundColor: "#050505",
+            scale: 2,
+            backgroundColor: '#0b0b0d', // Matches the card's real dark backdrop instead of stripping it to transparent
             logging: false,
-            useCORS: true 
+            useCORS: true,
+            scrollX: 0,
+            scrollY: -window.scrollY, // Corrects capture offset so unrelated fixed elements can't bleed in
+            ignoreElements: (el) => {
+                return el.id === 'themeToggle' || el.id === 'widgetCelebrationOverlay' ||
+                    (el.classList && el.classList.contains('trophy-celebration-overlay'));
+            }
         });
 
         const imageURL = canvas.toDataURL("image/jpeg", 0.95); 
@@ -275,12 +530,14 @@ function renderLogsUI() {
                 const modeLabel = log.type === 'focus' ? 'Lock In Session' : 'Rest Break';
                 const tagClass = log.completedOption ? 'complete' : 'interrupted';
                 const tagLabel = log.completedOption ? 'Completed' : 'Interrupted';
+                const taskDisplay = log.task || '-';
 
                 const row = document.createElement('tr');
                 row.innerHTML = `
                     <td>${log.timestamp}</td>
                     <td><strong>${modeLabel}</strong></td>
                     <td>${durationMinutes} mins</td>
+                    <td title="${taskDisplay}">${taskDisplay}</td>
                     <td><span class="status-tag ${tagClass}">${tagLabel}</span></td>
                 `;
                 logBody.appendChild(row);
@@ -288,7 +545,7 @@ function renderLogsUI() {
         } else {
             logBody.innerHTML = `
                 <tr class="empty-row-notice">
-                    <td colspan="4">No historical telemetry compiled in terminal stack yet.</td>
+                    <td colspan="5">No historical telemetry compiled in terminal stack yet.</td>
                 </tr>
             `;
         }
@@ -306,12 +563,18 @@ function renderProductivityCharts() {
         const maxMins = Math.max(...items.map(i => i.mins), 1);
         chartContainer.innerHTML = '';
 
+        const now = new Date();
+        let currentIdx;
+        if (selectKey === 'daily') currentIdx = getCurrentDayIndex(now);
+        else if (selectKey === 'weekly') currentIdx = getCurrentWeekIndex(now);
+        else currentIdx = getCurrentMonthIndex(now);
+
         items.forEach((item, idx) => {
             const heightPercentage = (item.mins / maxMins) * 100;
             const column = document.createElement('div');
             column.classList.add('chart-bar-column');
 
-            const isActive = idx === items.length - 1 ? 'active-bar' : '';
+            const isActive = idx === currentIdx ? 'active-bar' : '';
             column.innerHTML = `
                 <div class="chart-bar-fill ${isActive}" style="height: ${heightPercentage}%" title="${item.mins} focused minutes"></div>
                 <div class="chart-bar-label">${item.label}</div>
@@ -334,9 +597,12 @@ function getTargetCabinet() {
 function renderTrophiesUI() {
     const targetCabinet = getTargetCabinet();
     if (targetCabinet) {
-        if (totalTrophies > 0) {
+        const currentDayIndex = getCurrentDayIndex();
+        const todaysTrophies = metricsDatabase.daily[currentDayIndex].trophies || 0;
+        
+        if (todaysTrophies > 0) {
             targetCabinet.innerHTML = '';
-            for (let i = 0; i < totalTrophies; i++) {
+            for (let i = 0; i < todaysTrophies; i++) {
                 const trophy = document.createElement('span');
                 trophy.classList.add('trophy-emoji');
                 trophy.textContent = '🏆';
@@ -349,15 +615,28 @@ function renderTrophiesUI() {
 }
 
 function grantFocusTrophy() {
-    totalTrophies++;
-    localStorage.setItem('lockdIn_trophyCount', totalTrophies);
-    renderTrophiesUI();
+    verifyDailyReset();
 
-    const currentDayIndex = new Date().getDay(); 
-    metricsDatabase.daily[currentDayIndex].mins += Math.round(currentSessionTotalTarget / 60);
-    metricsDatabase.weekly[4].mins += Math.round(currentSessionTotalTarget / 60);
-    
+    const now = new Date();
+    const dayIdx = getCurrentDayIndex(now);
+    const weekIdx = getCurrentWeekIndex(now);
+    const monthIdx = getCurrentMonthIndex(now);
+    const minsToAdd = Math.round(currentSessionTotalTarget / 60);
+
+    // Distribute time and trophy increments across daily, weekly, and monthly buckets
+    metricsDatabase.daily[dayIdx].mins += minsToAdd;
+    metricsDatabase.daily[dayIdx].trophies = (metricsDatabase.daily[dayIdx].trophies || 0) + 1;
+
+    metricsDatabase.weekly[weekIdx].mins += minsToAdd;
+    metricsDatabase.weekly[weekIdx].trophies = (metricsDatabase.weekly[weekIdx].trophies || 0) + 1;
+
+    metricsDatabase.monthly[monthIdx].mins += minsToAdd;
+    metricsDatabase.monthly[monthIdx].trophies = (metricsDatabase.monthly[monthIdx].trophies || 0) + 1;
+
     localStorage.setItem('lockdIn_metricsDatabase', JSON.stringify(metricsDatabase));
+    
+    updateStreakOnCompletion();
+    renderTrophiesUI();
     renderProductivityCharts();
     renderProfileCardData(); 
 }
@@ -369,16 +648,14 @@ function switchMode(wasGracefullyCompleted = true) {
         if (wasGracefullyCompleted) {
             grantFocusTrophy();
             triggerTrophyCelebration();
-            focusEndSound.currentTime = 0;
-            focusEndSound.play().catch(e => console.log('Audio error:', e));
+            playCompletionChime('focus');
         }
         currentMode = 'rest';
         timeLeft = selectedRestDuration;
         currentSessionTotalTarget = selectedRestDuration;
     } else {
         if (wasGracefullyCompleted) {
-            restEndSound.currentTime = 0;
-            restEndSound.play().catch(e => console.log('Audio error:', e));
+            playCompletionChime('rest');
         }
         currentMode = 'focus';
         timeLeft = selectedFocusDuration;
@@ -432,8 +709,6 @@ function tick() {
         updateRollingDisplay();
     } else {
         switchMode(true);
-        // Do NOT blindly call toggleTimer() here, which recursively fights itself and turns the tracker OFF. 
-        // Simply let the active setInterval heart pulse continue tracking the *newly* rotated timeLeft integer!
         saveTimerStateToLocalStorage();
     }
 }
@@ -445,6 +720,7 @@ function toggleTimer() {
         updateModeUIContext();
         saveTimerStateToLocalStorage();
     } else {
+        playStartChime(currentMode);
         timer = setInterval(tick, 1000);
         isRunning = true;
         updateModeUIContext();
@@ -492,11 +768,10 @@ function triggerResetLogic() {
             selectedRestDuration = 5 * 60;
             timeLeft = selectedFocusDuration;
             currentSessionTotalTarget = selectedFocusDuration;
-            totalTrophies = 0;
             historicalLogsStack = [];
 
             Object.keys(metricsDatabase).forEach(key => {
-                metricsDatabase[key].forEach(item => item.mins = 0);
+                metricsDatabase[key].forEach(item => { item.mins = 0; item.trophies = 0; });
             });
 
             saveTimerStateToLocalStorage();
@@ -517,6 +792,7 @@ function triggerResetLogic() {
             renderLogsUI();
             renderProductivityCharts();
             renderProfileCardData();
+            renderStreakUI();
             
             resetClickCount = 0;
         } else {
@@ -527,8 +803,10 @@ function triggerResetLogic() {
     }
 }
 
-// SAFER RECOVERY LOOP LOGIC:
+// SAFER RECOVERY LOOP LOGIC
 function recoverActiveTimerState() {
+    verifyDailyReset();
+    verifyStreakIntegrity();
     if (isRunning) {
         const expectedEnd = localStorage.getItem('lockdIn_expectedEndTime');
         if (expectedEnd && expectedEnd !== "undefined" && !isNaN(expectedEnd)) {
@@ -555,9 +833,7 @@ function recoverActiveTimerState() {
 function setupDeferredSoundPlayback() {
     function playPendingSound() {
         if (!pendingCompletionSound) return;
-        const sound = pendingCompletionSound === 'focus' ? focusEndSound : restEndSound;
-        sound.currentTime = 0;
-        sound.play().catch(e => console.log('Audio error:', e));
+        playCompletionChime(pendingCompletionSound);
         pendingCompletionSound = null;
         document.removeEventListener('click', playPendingSound);
         document.removeEventListener('keydown', playPendingSound);
@@ -570,6 +846,8 @@ function setupDeferredSoundPlayback() {
 
 document.addEventListener('visibilitychange', () => {
     if (document.visibilityState === 'visible' && isRunning) {
+        verifyDailyReset();
+        verifyStreakIntegrity();
         const expectedEnd = localStorage.getItem('lockdIn_expectedEndTime');
         if (expectedEnd && expectedEnd !== "undefined" && !isNaN(expectedEnd)) {
             let dynamicDifference = Math.round((parseInt(expectedEnd) - Date.now()) / 1000);
@@ -640,6 +918,7 @@ function setupConfigSelectors() {
     taskInputField.addEventListener('input', (e) => {
         localStorage.setItem('lockdIn_activeTaskGoal', e.target.value);
         updateModeUIContext();
+        renderProfileCardData(); // Re-render card syncs task changes directly to exported file 
     });
 
     chartTimelineSelector.addEventListener('change', renderProductivityCharts);
@@ -654,7 +933,7 @@ function applyLoadedTheme() {
         themeIcon.innerHTML = `<path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>`;
     } else {
         document.body.classList.replace('light-mode', 'dark-mode');
-        themeIcon.innerHTML = `<circle cx="12" cy="12" r="5"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/>`;
+        themeIcon.innerHTML = `<circle cx="12" cy="12" r="5"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2+M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/>`;
     }
 }
 
@@ -673,7 +952,7 @@ async function togglePiP() {
 
     const currentCachedTask = localStorage.getItem('lockdIn_activeTaskGoal') || '';
 
-    const pipWindow = await window.documentPictureInPicture.requestWindow({ width: 380, height: 350 });
+    const pipWindow = await window.documentPictureInPicture.requestWindow({ width: 420, height: 430 });
 
     [...document.styleSheets].forEach((styleSheet) => {
         try {
@@ -741,3 +1020,4 @@ renderTrophiesUI();
 applyLoadedTheme();
 processUniquePlatformVisits();
 renderProfileCardData();
+verifyStreakIntegrity();

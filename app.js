@@ -442,21 +442,25 @@ function renderProfileCardData() {
 // --- html2canvas Core Image Generation Downloader Engine ---
 async function downloadProfileCardAsJpg() {
     renderProfileCardData();
+    
+    // 1. Add the exporting class to the frame
+    profileCardCanvasFrame.classList.add('is-exporting');
+
     try {
+        // 2. Small delay to allow the browser to switch to the "clean" export look
+        await new Promise(resolve => setTimeout(resolve, 100));
+
         const canvas = await html2canvas(profileCardCanvasFrame, {
-            scale: 2,
-            backgroundColor: '#0b0b0d', // Matches the card's real dark backdrop instead of stripping it to transparent
+            scale: 3, 
+            backgroundColor: '#050505', 
             logging: false,
             useCORS: true,
+            allowTaint: true,
             scrollX: 0,
-            scrollY: -window.scrollY, // Corrects capture offset so unrelated fixed elements can't bleed in
-            ignoreElements: (el) => {
-                return el.id === 'themeToggle' || el.id === 'widgetCelebrationOverlay' ||
-                    (el.classList && el.classList.contains('trophy-celebration-overlay'));
-            }
+            scrollY: -window.scrollY, 
         });
 
-        const imageURL = canvas.toDataURL("image/jpeg", 0.95); 
+        const imageURL = canvas.toDataURL("image/jpeg", 1.0); 
         const virtualAnchor = document.createElement('a');
         const activeRange = (cardTimelineSelector.value || "focus").toLowerCase();
         
@@ -468,40 +472,9 @@ async function downloadProfileCardAsJpg() {
         
     } catch (err) {
         console.error("Canvas export rendering failed.", err);
-    }
-}
-
-function renderLogsUI() {
-    const activeDocument = widget.ownerDocument || document;
-    const logBody = activeDocument.getElementById('terminalLogBody') || terminalLogBody;
-    
-    if (logBody) {
-        if (historicalLogsStack.length > 0) {
-            logBody.innerHTML = '';
-            historicalLogsStack.forEach(log => {
-                const durationMinutes = Math.round(log.targetDurationSeconds / 60);
-                const modeLabel = log.type === 'focus' ? 'Lock In Session' : 'Rest Break';
-                const tagClass = log.completedOption ? 'complete' : 'interrupted';
-                const tagLabel = log.completedOption ? 'Completed' : 'Interrupted';
-                const taskDisplay = log.task || '-';
-
-                const row = document.createElement('tr');
-                row.innerHTML = `
-                    <td>${log.timestamp}</td>
-                    <td><strong>${modeLabel}</strong></td>
-                    <td>${durationMinutes} mins</td>
-                    <td title="${taskDisplay}">${taskDisplay}</td>
-                    <td><span class="status-tag ${tagClass}">${tagLabel}</span></td>
-                `;
-                logBody.appendChild(row);
-            });
-        } else {
-            logBody.innerHTML = `
-                <tr class="empty-row-notice">
-                    <td colspan="5">No historical telemetry compiled in terminal stack yet.</td>
-                </tr>
-            `;
-        }
+    } finally {
+        // 3. Remove the class so your website looks normal again on screen
+        profileCardCanvasFrame.classList.remove('is-exporting');
     }
 }
 

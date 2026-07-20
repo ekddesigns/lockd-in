@@ -1,25 +1,8 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-        <!-- Primary Meta Tags -->
-        <meta name="title" content="Lockd In — Focus Workspace">
-        <meta name="description" content="A minimalist high-performance focus tool to help you outwork and outlast. Built for deep work sessions.">
-    
-        <!-- Open Graph / Facebook -->
-        <meta property="og:type" content="website">
-        <meta property="og:url" content="https://ekddesigns.github.io/lockd-in/">
-        <meta property="og:title" content="Lockd In — Focus Workspace">
-        <meta property="og:description" content="A minimalist high-performance focus tool to help you outwork and outlast. Built for deep work sessions.">
-        <meta property="og:image" content="https://ekddesigns.github.io/lockd-in/preview-image.png">
-    
-        <!-- Twitter -->
-        <meta property="twitter:card" content="summary_large_image">
-        <meta property="twitter:url" content="https://ekddesigns.github.io/lockd-in/">
-        <meta property="twitter:title" content="Lockd In — Focus Workspace">
-        <meta property="twitter:description" content="A minimalist high-performance focus tool to help you outwork and outlast. Built for deep work sessions.">
-        <meta property="twitter:image" content="https://ekddesigns.github.io/lockd-in/preview-image.png">
-        <meta charset="UTF-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Lockd In — Focus Workspace</title>
     <!-- Google Fonts: Russo One for Logo, Space Grotesk for Workspace UI -->
     <link href="https://fonts.googleapis.com/css2?family=Russo+One&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -47,15 +30,17 @@
                 <!-- Header Module Area -->
                 <div class="widget-header" id="widgetHeader">
                     <span class="app-logo">LOCKD IN</span>
-                    <div class="streak-badge" id="streakBadge" title="Consecutive days with at least one completed Lock In session">
-                        <span class="streak-flame">🔥</span>
-                        <span class="streak-count" id="streakCount">0</span>
+                    <!-- Grouped actions for the right side -->
+                    <div class="header-actions" style="display: flex; align-items: center; gap: 8px;">
+                        <div class="streak-badge" id="streakBadge" title="Streak">
+                            <span class="streak-flame">🔥</span>
+                            <span class="streak-count" id="streakCount">0</span>
+                        </div>
+                        <button id="pipBtn" class="icon-btn" title="Pop out">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="8" y="8" width="12" height="10" rx="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg>
+                        </button>
                     </div>
-                    <!-- PiP Button Component -->
-                    <button id="pipBtn" class="icon-btn" title="Pop out widget into floating desktop view">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="8" y="8" width="12" height="10" rx="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg>
-                    </button>
-                </div>
+            </div>
                 
                 <!-- Dynamic State Text Indicator Block -->
                 <div class="state-indicator-row" id="stateIndicatorRow">

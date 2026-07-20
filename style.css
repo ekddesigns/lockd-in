@@ -407,7 +407,12 @@ body {
 .light-mode .trophy-celebration-overlay { background-color: rgba(255, 255, 255, 0.92); }
 .trophy-celebration-overlay.celebrate-active { opacity: 1; transform: scale(1); pointer-events: auto; }
 
-.widget-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; gap: 8px; }
+.widget-header {
+    display: flex;
+    justify-content: space-between; 
+    align-items: center;
+    margin-bottom: 24px;
+}
 
 .streak-badge {
     display: flex;
@@ -420,7 +425,13 @@ body {
     border: 1px solid var(--border-color);
     padding: 4px 12px;
     border-radius: 20px;
+    
     line-height: 1;
+    cursor: default;
+}
+.streak-flame {
+    font-size: 1rem;
+    filter: drop-shadow(0 0 2px rgba(255, 165, 0, 0.3));
 }
 .streak-flame { font-size: 0.95rem; line-height: 1; }
 .streak-count { line-height: 1; }
@@ -565,4 +576,22 @@ body.pip-mode .controls { margin-bottom: 16px; }
 @media (max-width: 420px) {
     :root { --row-height: 60px; }
     .timer-display { margin-bottom: 24px; }
+}
+
+/* This class will be added via JS only during the download */
+.is-exporting .profile-glass-card {
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+    background: rgba(15, 15, 15, 0.95) !important; /* A solid dark glass look */
+}
+
+/* Fixes the dark overlay issue in the screenshot */
+.is-exporting .profile-card-canvas-bg::before {
+    display: none !important;
+}
+
+/* Ensures the background image is visible and correct */
+.is-exporting .profile-card-canvas-bg {
+    background-color: #050505 !important;
+    box-shadow: none !important;
 }

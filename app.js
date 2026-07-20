@@ -452,7 +452,7 @@ async function downloadProfileCardAsJpg() {
 
         const canvas = await html2canvas(profileCardCanvasFrame, {
             scale: 3, 
-            backgroundColor: '#050505', 
+            backgroundColor: 'null', 
             logging: false,
             useCORS: true,
             allowTaint: true,

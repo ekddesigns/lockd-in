@@ -578,20 +578,20 @@ body.pip-mode .controls { margin-bottom: 16px; }
     .timer-display { margin-bottom: 24px; }
 }
 
-/* This class will be added via JS only during the download */
 .is-exporting .profile-glass-card {
     backdrop-filter: none !important;
     -webkit-backdrop-filter: none !important;
-    background: rgba(15, 15, 15, 0.95) !important; /* A solid dark glass look */
-}
-
-/* Fixes the dark overlay issue in the screenshot */
-.is-exporting .profile-card-canvas-bg::before {
-    display: none !important;
-}
-
-/* Ensures the background image is visible and correct */
-.is-exporting .profile-card-canvas-bg {
-    background-color: #050505 !important;
+    background-color: #121214 !important; 
+    border: 1px solid rgba(255, 255, 255, 0.2) !important; 
     box-shadow: none !important;
+}
+
+.is-exporting .profile-card-canvas-bg::before {
+    background: rgba(0, 0, 0, 0.3) !important;
+}
+
+.is-exporting .card-metrics-display, 
+.is-exporting .card-logo {
+    color: #ffffff !important;
+    text-shadow: none !important;
 }

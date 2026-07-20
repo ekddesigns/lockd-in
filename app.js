@@ -327,15 +327,12 @@ function updateRollingDisplay() {
     document.title = `(${hStr}:${mStr}:${sStr}) Lockd In`;
 }
 
-// --- TRUE REAL-TIME SUPABASE VISITOR COUNTER ENGINE ---
+// --- TRUE REAL-TIME GLOBAL CLOUD VISITOR COUNTER ENGINE ---
 async function processUniquePlatformVisits() {
-    // ⚠️ PASTE YOUR SUPABASE CREDENTIALS HERE:
-    const SUPABASE_URL = "https://zxapffpiompclejufjic.supabase.co";
-    const SUPABASE_ANON_KEY = "sb_secret_3dg4hKL_HQMKOyAtXMSIYA_UBI0j1ED";
-
     let hasBeenCounted = localStorage.getItem('lockdIn_countedOnPlatform');
+    const workspaceKey = "ekddesigns_lockdin_workspace";
+    const metricKey = "unique_builders_joined";
 
-    // Display locally cached count instantly so UI doesn't look empty while fetching
     const cachedCount = parseInt(localStorage.getItem('lockdIn_lastKnownCount'));
     if (!isNaN(cachedCount) && cachedCount > 0) {
         const activeDocument = widget.ownerDocument || document;
@@ -347,44 +344,15 @@ async function processUniquePlatformVisits() {
 
     const fetchGlobalMetrics = async (incrementData = false) => {
         try {
-            let url, options;
+            const url = incrementData
+                ? `https://api.counterapi.dev/v1/${workspaceKey}/${metricKey}/up`
+                : `https://api.counterapi.dev/v1/${workspaceKey}/${metricKey}`;
 
-            if (incrementData) {
-                // Trigger the secure SQL function to add +1
-                url = `${SUPABASE_URL}/rest/v1/rpc/increment_counter`;
-                options = {
-                    method: 'POST',
-                    headers: {
-                        'apikey': SUPABASE_ANON_KEY,
-                        'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
-                        'Content-Type': 'application/json'
-                    }
-                };
-            } else {
-                // Just read the current count securely
-                url = `${SUPABASE_URL}/rest/v1/global_counter?id=eq.1&select=count`;
-                options = {
-                    method: 'GET',
-                    headers: {
-                        'apikey': SUPABASE_ANON_KEY,
-                        'Authorization': `Bearer ${SUPABASE_ANON_KEY}`
-                    }
-                };
-            }
-
-            const response = await fetch(url, options);
+            // Add strict cache-busting so browsers don't trap the user count fetch data
+            const response = await fetch(url, { cache: 'no-store' });
             const data = await response.json();
-            
-            let globalTotal = 1;
-            
-            // Supabase returns data differently based on if we used a Function (POST) or a Table Read (GET)
-            if (incrementData) {
-                globalTotal = data; 
-            } else {
-                globalTotal = data[0] ? data[0].count : 1; 
-            }
+            const globalTotal = data.count || 1;
 
-            // Sync the true server value locally
             localStorage.setItem('lockdIn_lastKnownCount', globalTotal);
 
             const activeDocument = widget.ownerDocument || document;
@@ -393,13 +361,11 @@ async function processUniquePlatformVisits() {
                 currentCounterNode.textContent = globalTotal.toString().padStart(3, '0');
             }
 
-            // Fire the celebration if they hit the threshold and are triggering a new +1
-            if (globalTotal >= 10 && incrementData) {
+            if (globalTotal >= 10) {
                 triggerMegaMilestoneCelebration(globalTotal);
             }
         } catch (error) {
-            console.warn("Global Supabase network synchronization dropped.", error);
-            // Fallback logic keeps numbers stable if user loses internet connection
+            console.warn("Global network synchronization dropped.", error);
             const lastKnown = parseInt(localStorage.getItem('lockdIn_lastKnownCount'));
             if (!isNaN(lastKnown) && lastKnown > 0) {
                 const activeDocument = widget.ownerDocument || document;
@@ -412,28 +378,15 @@ async function processUniquePlatformVisits() {
     };
 
     if (!hasBeenCounted) {
-        // Brand new visitor: Increment the database by +1
         await fetchGlobalMetrics(true);
         localStorage.setItem('lockdIn_countedOnPlatform', 'true');
     } else {
-        // Returning visitor: Just pull the current absolute total
         await fetchGlobalMetrics(false);
     }
 
-    // Ping the Supabase server every 60 seconds to silently grab new joins while running
     setInterval(async () => {
         await fetchGlobalMetrics(false);
     }, 60000);
-}
-
-function triggerMegaMilestoneCelebration(count) {
-    widgetCelebrationOverlay.innerHTML = `🎉<div style="font-size: 1.2rem; font-family:'Space Grotesk'; margin-top:10px;">${count} BUILDERS JOINED!</div>`;
-    widgetCelebrationOverlay.classList.add('celebrate-active');
-    
-    setTimeout(() => {
-        widgetCelebrationOverlay.classList.remove('celebrate-active');
-        widgetCelebrationOverlay.innerHTML = `🏆`; 
-    }, 5000);
 }
 
 // --- Persistent Tabular Logging System ---

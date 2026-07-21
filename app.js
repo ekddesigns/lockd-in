@@ -63,45 +63,43 @@ function getCurrentDayIndex(dateObj = new Date()) { return dateObj.getDay(); }
 function getCurrentWeekIndex(dateObj = new Date()) { return Math.min(4, Math.floor((dateObj.getDate() - 1) / 7)); }
 function getCurrentMonthIndex(dateObj = new Date()) { return dateObj.getMonth(); }
 
-// Check for a new day to handle the strict "Today's Milestones" logic
 function verifyDailyReset() {
     const now = new Date();
     const todayStr = now.toDateString();
-    const storedDate = localStorage.getItem('lockdIn_lastDate');
+    const storedDateStr = localStorage.getItem('lockdIn_lastDate');
 
-    if (storedDate !== todayStr) {
-        const prevDate = storedDate ? new Date(storedDate) : null;
+    if (storedDateStr !== todayStr) {
+        const lastDate = storedDateStr ? new Date(storedDateStr) : new Date();
+        
+        if (now.getFullYear() !== lastDate.getFullYear()) {
+            metricsDatabase.monthly.forEach(m => { m.mins = 0; m.trophies = 0; });
+            metricsDatabase.weekly.forEach(w => { w.mins = 0; w.trophies = 0; });
+            metricsDatabase.daily.forEach(d => { d.mins = 0; d.trophies = 0; });
+        } 
+        else if (now.getMonth() !== lastDate.getMonth()) {
+            metricsDatabase.weekly.forEach(w => { w.mins = 0; w.trophies = 0; });
+            metricsDatabase.daily.forEach(d => { d.mins = 0; d.trophies = 0; });
+        }
+        else {
+            const timeDiff = now.getTime() - lastDate.getTime();
+            const daysDiff = timeDiff / (1000 * 3600 * 24);
+            
+            if (now.getDay() < lastDate.getDay() || daysDiff >= 7) {
+                metricsDatabase.daily.forEach(d => { d.mins = 0; d.trophies = 0; });
+            }
+        }
 
-        // Only wipe TODAY's weekday bucket so "Today's Milestones" is always fresh,
-        // while the rest of the week stays intact for the Productivity Metric Chart
         const todayIdx = getCurrentDayIndex(now);
         metricsDatabase.daily[todayIdx].mins = 0;
         metricsDatabase.daily[todayIdx].trophies = 0;
-
-        // Guard: if we've rolled into a new month, the week-of-month index will be
-        // reused (e.g. index 0 again) — wipe it first so it doesn't inherit last month's total
-        if (!prevDate || prevDate.getMonth() !== now.getMonth() || prevDate.getFullYear() !== now.getFullYear()) {
-            const weekIdx = getCurrentWeekIndex(now);
-            metricsDatabase.weekly[weekIdx].mins = 0;
-            metricsDatabase.weekly[weekIdx].trophies = 0;
-        }
-
-        // Guard: if we've rolled into a new year, wipe this month's bucket so it
-        // doesn't inherit last year's total for the same month
-        if (!prevDate || prevDate.getFullYear() !== now.getFullYear()) {
-            const monthIdx = getCurrentMonthIndex(now);
-            metricsDatabase.monthly[monthIdx].mins = 0;
-            metricsDatabase.monthly[monthIdx].trophies = 0;
-        }
 
         localStorage.setItem('lockdIn_lastDate', todayStr);
         localStorage.setItem('lockdIn_metricsDatabase', JSON.stringify(metricsDatabase));
     }
 }
-verifyDailyReset(); // Verify on boot
+verifyDailyReset(); 
 
-// --- Streak Tracking (same date-check pattern as verifyDailyReset) ---
-// A streak day counts once at least one focus session completes gracefully that day.
+
 function renderStreakUI() {
     const activeDocument = widget.ownerDocument || document;
     const targetEl = activeDocument.getElementById('streakCount') || streakCountEl;
@@ -452,7 +450,7 @@ async function downloadProfileCardAsJpg() {
 
         const canvas = await html2canvas(profileCardCanvasFrame, {
             scale: 3, 
-            backgroundColor: 'null', 
+            backgroundColor: '#050505', 
             logging: false,
             useCORS: true,
             allowTaint: true,

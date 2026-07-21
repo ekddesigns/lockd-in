@@ -71,15 +71,20 @@ function verifyDailyReset() {
     if (storedDateStr !== todayStr) {
         const lastDate = storedDateStr ? new Date(storedDateStr) : new Date();
         
+        // 1. Detect Year Change -> Wipe Months, Weeks, and Days
         if (now.getFullYear() !== lastDate.getFullYear()) {
             metricsDatabase.monthly.forEach(m => { m.mins = 0; m.trophies = 0; });
             metricsDatabase.weekly.forEach(w => { w.mins = 0; w.trophies = 0; });
             metricsDatabase.daily.forEach(d => { d.mins = 0; d.trophies = 0; });
         } 
+        // 2. Detect Month Change -> Wipe Weeks and Days
         else if (now.getMonth() !== lastDate.getMonth()) {
             metricsDatabase.weekly.forEach(w => { w.mins = 0; w.trophies = 0; });
             metricsDatabase.daily.forEach(d => { d.mins = 0; d.trophies = 0; });
         }
+        // 3. Detect Week Change -> Wipe Days
+        // We check if the day of the week is lower than the last day (e.g. going from Sat to Mon)
+        // or if it's been more than 7 days since the last login.
         else {
             const timeDiff = now.getTime() - lastDate.getTime();
             const daysDiff = timeDiff / (1000 * 3600 * 24);
@@ -89,6 +94,7 @@ function verifyDailyReset() {
             }
         }
 
+        // Always ensure the "Current Day" slot is fresh when the date changes
         const todayIdx = getCurrentDayIndex(now);
         metricsDatabase.daily[todayIdx].mins = 0;
         metricsDatabase.daily[todayIdx].trophies = 0;

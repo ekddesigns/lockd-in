@@ -362,7 +362,6 @@ body {
     100% { transform: scale(0.9); opacity: 0; box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
 }
 
-/* --- Charts & Dropdown Views --- */
 .section-header-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px; }
 .dropdown-select {
     background-color: var(--btn-secondary-bg); border: 1px solid var(--border-color); color: var(--text-main);

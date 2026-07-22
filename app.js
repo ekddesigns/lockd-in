@@ -71,20 +71,15 @@ function verifyDailyReset() {
     if (storedDateStr !== todayStr) {
         const lastDate = storedDateStr ? new Date(storedDateStr) : new Date();
         
-        // 1. Detect Year Change -> Wipe Months, Weeks, and Days
         if (now.getFullYear() !== lastDate.getFullYear()) {
             metricsDatabase.monthly.forEach(m => { m.mins = 0; m.trophies = 0; });
             metricsDatabase.weekly.forEach(w => { w.mins = 0; w.trophies = 0; });
             metricsDatabase.daily.forEach(d => { d.mins = 0; d.trophies = 0; });
         } 
-        // 2. Detect Month Change -> Wipe Weeks and Days
         else if (now.getMonth() !== lastDate.getMonth()) {
             metricsDatabase.weekly.forEach(w => { w.mins = 0; w.trophies = 0; });
             metricsDatabase.daily.forEach(d => { d.mins = 0; d.trophies = 0; });
         }
-        // 3. Detect Week Change -> Wipe Days
-        // We check if the day of the week is lower than the last day (e.g. going from Sat to Mon)
-        // or if it's been more than 7 days since the last login.
         else {
             const timeDiff = now.getTime() - lastDate.getTime();
             const daysDiff = timeDiff / (1000 * 3600 * 24);
@@ -94,7 +89,6 @@ function verifyDailyReset() {
             }
         }
 
-        // Always ensure the "Current Day" slot is fresh when the date changes
         const todayIdx = getCurrentDayIndex(now);
         metricsDatabase.daily[todayIdx].mins = 0;
         metricsDatabase.daily[todayIdx].trophies = 0;
@@ -479,6 +473,40 @@ async function downloadProfileCardAsJpg() {
     } finally {
         // 3. Remove the class so your website looks normal again on screen
         profileCardCanvasFrame.classList.remove('is-exporting');
+    }
+}
+
+function renderLogsUI() {
+    const activeDocument = widget.ownerDocument || document;
+    const logBody = activeDocument.getElementById('terminalLogBody') || terminalLogBody;
+    
+    if (logBody) {
+        if (historicalLogsStack.length > 0) {
+            logBody.innerHTML = '';
+            historicalLogsStack.forEach(log => {
+                const durationMinutes = Math.round(log.targetDurationSeconds / 60);
+                const modeLabel = log.type === 'focus' ? 'Lock In Session' : 'Rest Break';
+                const tagClass = log.completedOption ? 'complete' : 'interrupted';
+                const tagLabel = log.completedOption ? 'Completed' : 'Interrupted';
+                const taskDisplay = log.task || '-';
+
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td>${log.timestamp}</td>
+                    <td><strong>${modeLabel}</strong></td>
+                    <td>${durationMinutes} mins</td>
+                    <td title="${taskDisplay}">${taskDisplay}</td>
+                    <td><span class="status-tag ${tagClass}">${tagLabel}</span></td>
+                `;
+                logBody.appendChild(row);
+            });
+        } else {
+            logBody.innerHTML = `
+                <tr class="empty-row-notice">
+                    <td colspan="5">No historical telemetry compiled in terminal stack yet.</td>
+                </tr>
+            `;
+        }
     }
 }
 

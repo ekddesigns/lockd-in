@@ -910,7 +910,7 @@ async function togglePiP() {
 
     const currentCachedTask = localStorage.getItem('lockdIn_activeTaskGoal') || '';
 
-    const pipWindow = await window.documentPictureInPicture.requestWindow({ width: 420, height: 430 });
+    const pipWindow = await window.documentPictureInPicture.requestWindow({ width: 300, height: 280 });
 
     [...document.styleSheets].forEach((styleSheet) => {
         try {

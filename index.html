@@ -28,6 +28,12 @@
     
     <!-- html2canvas Library -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+
+    <!-- Favicons -->
+    <link rel="icon" type="image/svg+xml" href="Favicon-lockd-in-white.svg" media="(prefers-color-scheme: dark)">
+    <link rel="icon" type="image/svg+xml" href="Favicon-lockd-in-black.svg" media="(prefers-color-scheme: light)">
+    <!-- Fallback for browsers that don't support media queries in favicons -->
+    <link rel="shortcut icon" href="Favicon-lockd-in-white.svg">
 </head>
 <body class="dark-mode">
 
@@ -48,7 +54,10 @@
 
                 <!-- Header Module Area -->
                 <div class="widget-header" id="widgetHeader">
-                    <span class="app-logo">LOCKD IN</span>
+                    <div class="app-logo">
+                        <img src="Primary-logo-lockd-in-white.svg" class="logo-white" alt="Lockd In Logo">
+                        <img src="Primary-logo-lockd-in-black.svg" class="logo-black" alt="Lockd In Logo">
+                    </div>
                     <!-- Grouped actions for the right side -->
                     <div class="header-actions" style="display: flex; align-items: center; gap: 8px;">
                         <div class="streak-badge" id="streakBadge" title="Streak">
@@ -186,7 +195,9 @@
                 
                 <div class="profile-card-canvas-bg" id="profileCardCanvasFrame">
                     <div class="profile-glass-card">
-                        <div class="card-logo">LOCKD IN</div>
+                        <div class="card-logo">
+                            <img src="Primary-logo-lockd-in-white.svg" alt="Lockd In" style="height: 22px; width: auto;">
+                        </div>
                         <div class="card-timeline-label" id="cardTimelineLabel">Daily Focus</div>
                         <div class="card-active-task" id="cardActiveTask">No active task</div>
                         <div class="card-metrics-display" id="cardMetricsDisplay">0.0 hrs</div>

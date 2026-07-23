@@ -1,9 +1,17 @@
+@font-face {
+    font-family: 'Cal Sans';
+    src: url('https://cdn.jsdelivr.net/gh/calcom/font@main/fonts/web/CalSans-SemiBold.woff2') format('woff2');
+    font-weight: 600;
+    font-style: normal;
+    font-display: swap;
+}
+
 /* --- Global Core Variables & Design Resets --- */
 * {
     margin: 0;
     padding: 0;
     box-sizing: border-box;
-    font-family: 'Space Grotesk', sans-serif;
+    font-family: 'Cal Sans', 'Space Grotesk', sans-serif;
 }
 
 :root {
@@ -17,9 +25,6 @@
     --active-selection: #262626;
     --status-success: #10b981;
     --status-fail: #ef4444;
-    
-    /* Strict rolling wheel constraint parameter handles */
-    --row-height: 80px;
 }
 
 .light-mode {
@@ -273,7 +278,7 @@ body {
 }
 
 .card-logo {
-    font-family: 'Russo One', sans-serif;
+    font-family: 'Cal Sans', 'Space Grotesk', sans-serif;
     font-size: 1.35rem;
     letter-spacing: 0.06em;
     color: #ffffff;
@@ -311,6 +316,8 @@ body {
 .card-badge-container {
     display: flex;
     justify-content: center;
+    gap: 8px;
+    flex-wrap: wrap;
     margin-bottom: 24px;
 }
 
@@ -436,7 +443,7 @@ body {
 .streak-count { line-height: 1; }
 
 .app-logo { 
-    font-family: 'Russo One', sans-serif;
+    font-family: 'Cal Sans', 'Space Grotesk', sans-serif;
     font-size: 1.4rem; 
     font-weight: 400; 
     letter-spacing: 0.04em; 
@@ -446,59 +453,15 @@ body {
 .icon-btn { background: none; border: none; color: var(--text-muted); cursor: pointer; padding: 6px; display: flex; align-items: center; border-radius: 8px; }
 .icon-btn:hover { color: var(--text-main); background: var(--btn-secondary-bg); }
 
-/* --- Mechanical Rolling Wheel System --- */
-.timer-display { 
-    display: flex; 
-    justify-content: center; 
-    align-items: center; 
-    gap: 4px; 
-    font-size: 3.2rem; 
-    font-weight: 600; 
-    letter-spacing: -0.02em; 
-    margin-bottom: 32px; 
-    color: var(--text-main); 
-    height: var(--row-height); 
-    
-    /* STRICT INNER MASK: Defends against wheel numbers displaying out of bounds */
-    overflow: hidden !important; 
-}
-
-.time-col { 
-    width: 1.35em; 
-    height: var(--row-height); 
-    position: relative; 
-    /* ADDITIONAL FENCE: Enforces column containment cleanly */
-    overflow: hidden !important;
-}
-
-.digit-wheel { 
-    position: absolute; 
-    width: 100%; 
-    left: 0; 
-    top: 0; 
-    display: flex; 
-    flex-direction: column; 
-    align-items: center; 
-    justify-content: flex-start; /* Aligns strictly from top */
-    transition: none; /* Countdown updates instantly, no rolling/sliding animation */
-}
-
-.digit-wheel div { 
-    height: var(--row-height); 
-    width: 100%;
-    display: flex; 
-    align-items: center; 
-    justify-content: center; 
-    flex-shrink: 0; 
-    line-height: 1; /* Eliminates vertical font-padding cropping issues */
-}
-
-.colon { 
-    height: var(--row-height); 
-    display: flex; 
-    align-items: center; 
-    padding-bottom: 8px; 
-    color: var(--text-main); 
+/* --- Plain Text Timer Display --- */
+.timer-display {
+    font-size: 3.2rem;
+    font-weight: 600;
+    letter-spacing: -0.02em;
+    margin-bottom: 32px;
+    color: var(--text-main);
+    text-align: center;
+    font-variant-numeric: tabular-nums;
     line-height: 1;
 }
 
@@ -522,9 +485,8 @@ body.pip-mode {
     display: flex; 
     justify-content: center; 
     align-items: center; 
-    --row-height: 60px; 
 }
-body.pip-mode .widget-container { 
+body.pip-mode .widget-container {
     width: 100vw; 
     height: 100vh; 
     border-radius: 0px; 
@@ -573,8 +535,7 @@ body.pip-mode .controls { margin-bottom: 16px; }
     .card-unit { font-size: 0.55rem; }
 }
 @media (max-width: 420px) {
-    :root { --row-height: 60px; }
-    .timer-display { margin-bottom: 24px; }
+    .timer-display { font-size: 2.6rem; margin-bottom: 24px; }
 }
 
 .is-exporting .profile-glass-card {
@@ -589,8 +550,144 @@ body.pip-mode .controls { margin-bottom: 16px; }
     background: rgba(0, 0, 0, 0.3) !important;
 }
 
-.is-exporting .card-metrics-display, 
+.is-exporting .card-metrics-display,
 .is-exporting .card-logo {
     color: #ffffff !important;
     text-shadow: none !important;
+}
+
+.is-exporting .card-timeline-label,
+.is-exporting .card-active-task,
+.is-exporting .card-quote-footer {
+    color: rgba(255, 255, 255, 0.6) !important;
+}
+
+.is-exporting .card-badge-pill {
+    color: #ffffff !important;
+    background: rgba(255, 255, 255, 0.08) !important;
+    border-color: rgba(255, 255, 255, 0.2) !important;
+}
+
+/* --- Profile Card Streak Badge --- */
+.card-streak-pill {
+    display: inline-block;
+}
+
+/* --- Custom Modal Overlay --- */
+.custom-modal-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.7);
+    backdrop-filter: blur(6px);
+    -webkit-backdrop-filter: blur(6px);
+    z-index: 1000;
+    display: none;
+    justify-content: center;
+    align-items: center;
+}
+.custom-modal-overlay.modal-visible {
+    display: flex;
+}
+
+.custom-modal {
+    background-color: var(--card-bg);
+    border: 1px solid var(--border-color);
+    border-radius: 20px;
+    padding: 32px;
+    max-width: 380px;
+    width: 90%;
+    text-align: center;
+    box-shadow: 0 25px 60px rgba(0, 0, 0, 0.5);
+    animation: modalSlideIn 0.25s ease;
+}
+
+@keyframes modalSlideIn {
+    from { opacity: 0; transform: scale(0.92) translateY(8px); }
+    to { opacity: 1; transform: scale(1) translateY(0); }
+}
+
+.custom-modal-title {
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: var(--text-main);
+    margin-bottom: 10px;
+}
+
+.custom-modal-message {
+    font-size: 0.85rem;
+    color: var(--text-muted);
+    line-height: 1.5;
+    margin-bottom: 24px;
+}
+
+.custom-modal-actions {
+    display: flex;
+    gap: 10px;
+    justify-content: center;
+}
+
+.modal-btn {
+    flex: 1;
+    padding: 12px 16px;
+    border: none;
+    border-radius: 12px;
+    font-size: 0.82rem;
+    font-weight: 600;
+    cursor: pointer;
+    font-family: inherit;
+}
+
+.modal-btn-primary {
+    background-color: var(--accent-color);
+    color: var(--bg-color);
+}
+
+.modal-btn-secondary {
+    background-color: var(--btn-secondary-bg);
+    color: var(--text-main);
+    border: 1px solid var(--border-color);
+}
+
+.modal-btn:hover { opacity: 0.9; }
+
+/* --- Notification Toast System --- */
+.toast-container {
+    position: fixed;
+    top: 24px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 900;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+    pointer-events: none;
+}
+
+.toast {
+    background-color: var(--card-bg);
+    border: 1px solid var(--border-color);
+    border-radius: 14px;
+    padding: 14px 24px;
+    color: var(--text-main);
+    font-size: 0.85rem;
+    font-weight: 600;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.4);
+    pointer-events: auto;
+    animation: toastIn 0.35s ease;
+    white-space: nowrap;
+}
+
+.toast.toast-exit {
+    animation: toastOut 0.3s ease forwards;
+}
+
+@keyframes toastIn {
+    from { opacity: 0; transform: translateY(-16px) scale(0.95); }
+    to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+@keyframes toastOut {
+    from { opacity: 1; transform: translateY(0) scale(1); }
+    to { opacity: 0; transform: translateY(-10px) scale(0.95); }
 }

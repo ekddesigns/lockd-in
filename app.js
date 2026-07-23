@@ -268,9 +268,66 @@ function playStartChime(mode) {
 // later programmatic playback (from setInterval-driven session completions) is allowed
 document.body.addEventListener('click', warmUpAudio, { once: true });
 
-const hoursWheel = document.getElementById('hoursWheel');
-const minsWheel = document.getElementById('minsWheel');
-const secsWheel = document.getElementById('secsWheel');
+const timerDisplay = document.getElementById('timerDisplay');
+const customModalOverlay = document.getElementById('customModalOverlay');
+const customModalTitle = document.getElementById('customModalTitle');
+const customModalMessage = document.getElementById('customModalMessage');
+const customModalActions = document.getElementById('customModalActions');
+const toastContainer = document.getElementById('toastContainer');
+const cardStreakBadge = document.getElementById('cardStreakBadge');
+
+// --- Custom Modal System ---
+function showCustomAlert(title, message) {
+    customModalTitle.textContent = title;
+    customModalMessage.textContent = message;
+    customModalActions.innerHTML = '';
+    const btn = document.createElement('button');
+    btn.className = 'modal-btn modal-btn-primary';
+    btn.textContent = 'Got it';
+    btn.addEventListener('click', () => {
+        customModalOverlay.classList.remove('modal-visible');
+    });
+    customModalActions.appendChild(btn);
+    customModalOverlay.classList.add('modal-visible');
+}
+
+function showCustomConfirm(title, message, onConfirm, onCancel) {
+    customModalTitle.textContent = title;
+    customModalMessage.textContent = message;
+    customModalActions.innerHTML = '';
+
+    const cancelBtn = document.createElement('button');
+    cancelBtn.className = 'modal-btn modal-btn-secondary';
+    cancelBtn.textContent = 'Cancel';
+    cancelBtn.addEventListener('click', () => {
+        customModalOverlay.classList.remove('modal-visible');
+        if (onCancel) onCancel();
+    });
+
+    const confirmBtn = document.createElement('button');
+    confirmBtn.className = 'modal-btn modal-btn-primary';
+    confirmBtn.textContent = 'Confirm';
+    confirmBtn.addEventListener('click', () => {
+        customModalOverlay.classList.remove('modal-visible');
+        if (onConfirm) onConfirm();
+    });
+
+    customModalActions.appendChild(cancelBtn);
+    customModalActions.appendChild(confirmBtn);
+    customModalOverlay.classList.add('modal-visible');
+}
+
+// --- Notification Toast System ---
+function showNotification(message, durationMs = 3500) {
+    const toast = document.createElement('div');
+    toast.className = 'toast';
+    toast.textContent = message;
+    toastContainer.appendChild(toast);
+    setTimeout(() => {
+        toast.classList.add('toast-exit');
+        toast.addEventListener('animationend', () => toast.remove());
+    }, durationMs);
+}
 
 // --- Sync Session Storage Runtime Configuration ---
 function saveTimerStateToLocalStorage() {
@@ -286,91 +343,87 @@ function saveTimerStateToLocalStorage() {
     }
 }
 
-// --- Wheel Elements Populator System ---
-function initializeWheels() {
-    let hoursHTML = '';
-    let minsSecsHTML = '';
-    for(let i = 0; i <= 24; i++) hoursHTML += `<div>${i.toString().padStart(2, '0')}</div>`;
-    for(let i = 0; i < 60; i++) minsSecsHTML += `<div>${i.toString().padStart(2, '0')}</div>`;
-    
-    hoursWheel.innerHTML = hoursHTML;
-    minsWheel.innerHTML = minsSecsHTML;
-    secsWheel.innerHTML = minsSecsHTML;
-}
-
-function getRowHeight() {
-    const activeDocument = widget.ownerDocument || document;
-    if (activeDocument !== document) {
-        return 60; 
-    }
-    const isMobileLayout = window.matchMedia("(max-width: 768px)").matches;
-    return isMobileLayout ? 60 : 80;
-}
-
-function updateRollingDisplay() {
+function updateTimerDisplay() {
     const safeTimeLeft = Math.max(timeLeft, 0);
     const hours = Math.floor(safeTimeLeft / 3600);
     const minutes = Math.floor((safeTimeLeft % 3600) / 60);
     const seconds = safeTimeLeft % 60;
 
-    const rowHeight = getRowHeight();
-
-    hoursWheel.style.transform = `translateY(-${hours * rowHeight}px)`;
-    minsWheel.style.transform = `translateY(-${minutes * rowHeight}px)`;
-    secsWheel.style.transform = `translateY(-${seconds * rowHeight}px)`;
-
     const hStr = hours.toString().padStart(2, '0');
     const mStr = minutes.toString().padStart(2, '0');
     const sStr = seconds.toString().padStart(2, '0');
-    document.title = `(${hStr}:${mStr}:${sStr}) Lockd In`;
+    const timeString = `${hStr}:${mStr}:${sStr}`;
+
+    const activeDocument = widget.ownerDocument || document;
+    const display = activeDocument.getElementById('timerDisplay') || timerDisplay;
+    if (display) display.textContent = timeString;
+
+    document.title = `(${timeString}) Lockd In`;
+}
+
+function triggerMegaMilestoneCelebration(count) {
+    if (localStorage.getItem('lockdIn_megaMilestoneSeen')) return;
+    showNotification(`🎉 ${count} builders joined the platform!`, 5000);
+    localStorage.setItem('lockdIn_megaMilestoneSeen', 'true');
+}
+
+function updateCounterDisplay(count) {
+    const activeDocument = widget.ownerDocument || document;
+    const node = activeDocument.getElementById('globalVisitorCount') || globalVisitorCount;
+    if (node) node.textContent = count.toLocaleString();
 }
 
 // --- TRUE REAL-TIME GLOBAL CLOUD VISITOR COUNTER ENGINE ---
 async function processUniquePlatformVisits() {
-    let hasBeenCounted = localStorage.getItem('lockdIn_countedOnPlatform');
+    const hasBeenCounted = localStorage.getItem('lockdIn_countedOnPlatform');
     const workspaceKey = "ekddesigns_lockdin_workspace";
     const metricKey = "unique_builders_joined";
+    let fetchFailCount = 0;
+    let pollingInterval = null;
 
     const cachedCount = parseInt(localStorage.getItem('lockdIn_lastKnownCount'));
     if (!isNaN(cachedCount) && cachedCount > 0) {
-        const activeDocument = widget.ownerDocument || document;
-        const currentCounterNode = activeDocument.getElementById('globalVisitorCount') || globalVisitorCount;
-        if (currentCounterNode) {
-            currentCounterNode.textContent = cachedCount.toString().padStart(3, '0');
-        }
+        updateCounterDisplay(cachedCount);
     }
 
     const fetchGlobalMetrics = async (incrementData = false) => {
         try {
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 5000);
+
             const url = incrementData
                 ? `https://api.counterapi.dev/v1/${workspaceKey}/${metricKey}/up`
                 : `https://api.counterapi.dev/v1/${workspaceKey}/${metricKey}`;
 
-            // Add strict cache-busting so browsers don't trap the user count fetch data
-            const response = await fetch(url, { cache: 'no-store' });
+            const response = await fetch(url, { cache: 'no-store', signal: controller.signal });
+            clearTimeout(timeoutId);
+            if (!response.ok) throw new Error(`HTTP ${response.status}`);
             const data = await response.json();
-            const globalTotal = data.count || 1;
 
-            localStorage.setItem('lockdIn_lastKnownCount', globalTotal);
+            if (typeof data.count !== 'number' || data.count <= 0) throw new Error('Invalid count');
+            const globalTotal = data.count;
 
-            const activeDocument = widget.ownerDocument || document;
-            const currentCounterNode = activeDocument.getElementById('globalVisitorCount') || globalVisitorCount;
-            if (currentCounterNode) {
-                currentCounterNode.textContent = globalTotal.toString().padStart(3, '0');
+            const prevCount = parseInt(localStorage.getItem('lockdIn_lastKnownCount')) || 0;
+            if (globalTotal >= prevCount) {
+                localStorage.setItem('lockdIn_lastKnownCount', globalTotal);
+                updateCounterDisplay(globalTotal);
             }
+
+            fetchFailCount = 0;
 
             if (globalTotal >= 10) {
                 triggerMegaMilestoneCelebration(globalTotal);
             }
         } catch (error) {
             console.warn("Global network synchronization dropped.", error);
+            fetchFailCount++;
+            if (fetchFailCount >= 3 && pollingInterval) {
+                clearInterval(pollingInterval);
+                pollingInterval = null;
+            }
             const lastKnown = parseInt(localStorage.getItem('lockdIn_lastKnownCount'));
             if (!isNaN(lastKnown) && lastKnown > 0) {
-                const activeDocument = widget.ownerDocument || document;
-                const currentCounterNode = activeDocument.getElementById('globalVisitorCount') || globalVisitorCount;
-                if (currentCounterNode) {
-                    currentCounterNode.textContent = lastKnown.toString().padStart(3, '0');
-                }
+                updateCounterDisplay(lastKnown);
             }
         }
     };
@@ -382,7 +435,7 @@ async function processUniquePlatformVisits() {
         await fetchGlobalMetrics(false);
     }
 
-    setInterval(async () => {
+    pollingInterval = setInterval(async () => {
         await fetchGlobalMetrics(false);
     }, 60000);
 }
@@ -435,6 +488,12 @@ function renderProfileCardData() {
     if (innerTask) innerTask.textContent = activeTaskString.trim() !== '' ? activeTaskString : "No active task";
     innerDisplay.textContent = `${totalHours} hrs`;
     if (innerBadge) innerBadge.textContent = `${localTotalTrophies} Trophies 🏆`;
+
+    const innerStreak = activeDocument.getElementById('cardStreakBadge') || cardStreakBadge;
+    if (innerStreak) {
+        const streak = parseInt(localStorage.getItem('lockdIn_streakCount')) || 0;
+        innerStreak.textContent = `🔥 ${streak} Day Streak`;
+    }
 }
 
 // --- html2canvas Core Image Generation Downloader Engine ---
@@ -607,6 +666,7 @@ function switchMode(wasGracefullyCompleted = true) {
             grantFocusTrophy();
             triggerTrophyCelebration();
             playCompletionChime('focus');
+            showNotification('🏆 Focus session complete! Time for a rest.');
         }
         currentMode = 'rest';
         timeLeft = selectedRestDuration;
@@ -614,6 +674,7 @@ function switchMode(wasGracefullyCompleted = true) {
     } else {
         if (wasGracefullyCompleted) {
             playCompletionChime('rest');
+            showNotification('✅ Rest over! Ready for the next session.');
         }
         currentMode = 'focus';
         timeLeft = selectedFocusDuration;
@@ -622,7 +683,7 @@ function switchMode(wasGracefullyCompleted = true) {
     
     saveTimerStateToLocalStorage();
     updateModeUIContext();
-    updateRollingDisplay();
+    updateTimerDisplay();
 }
 
 function updateModeUIContext() {
@@ -663,10 +724,15 @@ function updateModeUIContext() {
 function tick() {
     if (timeLeft > 0) {
         timeLeft--;
-        localStorage.setItem('lockdIn_timeLeft', timeLeft); 
-        updateRollingDisplay();
+        localStorage.setItem('lockdIn_timeLeft', timeLeft);
+        updateTimerDisplay();
     } else {
         switchMode(true);
+        if (currentMode === 'focus') {
+            clearInterval(timer);
+            isRunning = false;
+            updateModeUIContext();
+        }
         saveTimerStateToLocalStorage();
     }
 }
@@ -708,56 +774,59 @@ function triggerResetLogic() {
         timeLeft = currentSessionTotalTarget;
         saveTimerStateToLocalStorage();
         updateModeUIContext();
-        updateRollingDisplay();
+        updateTimerDisplay();
     } else if (resetClickCount === 3) {
         clearInterval(timer);
         isRunning = false;
         updateModeUIContext();
-        
-        const isUserCertain = confirm("Are you sure you want to hard reset your workspace? This will permanently wipe your metrics, logs, and achieved milestones.");
-        
-        if (isUserCertain) {
-            const countedToken = localStorage.getItem('lockdIn_countedOnPlatform');
-            localStorage.clear();
-            if (countedToken) localStorage.setItem('lockdIn_countedOnPlatform', countedToken);
+        resetClickCount = 0;
 
-            currentMode = 'focus';
-            selectedFocusDuration = 180 * 60;
-            selectedRestDuration = 5 * 60;
-            timeLeft = selectedFocusDuration;
-            currentSessionTotalTarget = selectedFocusDuration;
-            historicalLogsStack = [];
+        showCustomConfirm(
+            'Hard Reset Workspace',
+            'This will permanently wipe your metrics, logs, and achieved milestones. Are you sure?',
+            () => {
+                const countedToken = localStorage.getItem('lockdIn_countedOnPlatform');
+                const lastKnownCount = localStorage.getItem('lockdIn_lastKnownCount');
+                localStorage.clear();
+                if (countedToken) localStorage.setItem('lockdIn_countedOnPlatform', countedToken);
+                if (lastKnownCount) localStorage.setItem('lockdIn_lastKnownCount', lastKnownCount);
 
-            Object.keys(metricsDatabase).forEach(key => {
-                metricsDatabase[key].forEach(item => { item.mins = 0; item.trophies = 0; });
-            });
+                currentMode = 'focus';
+                selectedFocusDuration = 180 * 60;
+                selectedRestDuration = 5 * 60;
+                timeLeft = selectedFocusDuration;
+                currentSessionTotalTarget = selectedFocusDuration;
+                historicalLogsStack = [];
 
-            saveTimerStateToLocalStorage();
+                Object.keys(metricsDatabase).forEach(key => {
+                    metricsDatabase[key].forEach(item => { item.mins = 0; item.trophies = 0; });
+                });
 
-            document.querySelectorAll('.config-card').forEach(card => card.classList.remove('active'));
-            const defaultFocusCard = document.querySelector('#focusConfig .config-card[data-time="180"]');
-            const defaultRestCard = document.querySelector('#restConfig .config-card[data-time="5"]');
-            if (defaultFocusCard) defaultFocusCard.classList.add('active');
-            if (defaultRestCard) defaultRestCard.classList.add('active');
-            
-            const activeDocument = widget.ownerDocument || document;
-            const innerInputField = activeDocument.getElementById('taskInputField') || taskInputField;
-            if (innerInputField) innerInputField.value = '';
+                saveTimerStateToLocalStorage();
 
-            updateModeUIContext();
-            updateRollingDisplay();
-            renderTrophiesUI();
-            renderLogsUI();
-            renderProductivityCharts();
-            renderProfileCardData();
-            renderStreakUI();
-            
-            resetClickCount = 0;
-        } else {
-            resetClickCount = 0;
-            recoverActiveTimerState();
-            updateRollingDisplay();
-        }
+                document.querySelectorAll('.config-card').forEach(card => card.classList.remove('active'));
+                const defaultFocusCard = document.querySelector('#focusConfig .config-card[data-time="180"]');
+                const defaultRestCard = document.querySelector('#restConfig .config-card[data-time="5"]');
+                if (defaultFocusCard) defaultFocusCard.classList.add('active');
+                if (defaultRestCard) defaultRestCard.classList.add('active');
+
+                const activeDocument = widget.ownerDocument || document;
+                const innerInputField = activeDocument.getElementById('taskInputField') || taskInputField;
+                if (innerInputField) innerInputField.value = '';
+
+                updateModeUIContext();
+                updateTimerDisplay();
+                renderTrophiesUI();
+                renderLogsUI();
+                renderProductivityCharts();
+                renderProfileCardData();
+                renderStreakUI();
+            },
+            () => {
+                recoverActiveTimerState();
+                updateTimerDisplay();
+            }
+        );
     }
 }
 
@@ -816,7 +885,7 @@ document.addEventListener('visibilitychange', () => {
             } else {
                 timeLeft = dynamicDifference;
             }
-            updateRollingDisplay();
+            updateTimerDisplay();
         }
     }
 });
@@ -850,7 +919,7 @@ function setupConfigSelectors() {
             timeLeft = selectedFocusDuration;
             currentSessionTotalTarget = selectedFocusDuration;
             saveTimerStateToLocalStorage();
-            updateRollingDisplay();
+            updateTimerDisplay();
         }
     });
 
@@ -868,7 +937,7 @@ function setupConfigSelectors() {
             timeLeft = selectedRestDuration;
             currentSessionTotalTarget = selectedRestDuration;
             saveTimerStateToLocalStorage();
-            updateRollingDisplay();
+            updateTimerDisplay();
         }
     });
 
@@ -903,7 +972,7 @@ function toggleTheme() {
 
 async function togglePiP() {
     if (!('documentPictureInPicture' in window)) {
-        alert("This browser workspace environment does not support Document PiP popouts yet. Use Chrome or Edge.");
+        showCustomAlert('PiP Not Supported', 'This browser does not support Document Picture-in-Picture yet. Use Chrome or Edge.');
         return;
     }
     if (window.documentPictureInPicture.window) return;
@@ -945,7 +1014,7 @@ async function togglePiP() {
         });
     }
 
-    setTimeout(updateRollingDisplay, 100);
+    setTimeout(updateTimerDisplay, 100);
 
     pipWindow.addEventListener('pagehide', () => {
         const workspace = document.querySelector('.upper-control-station');
@@ -953,11 +1022,9 @@ async function togglePiP() {
         
         taskInputField.value = localStorage.getItem('lockdIn_activeTaskGoal') || '';
         updateModeUIContext();
-        updateRollingDisplay();
+        updateTimerDisplay();
     });
 }
-
-window.addEventListener('resize', updateRollingDisplay);
 
 // --- Event Subscriptions Linkage ---
 startBtn.addEventListener('click', toggleTimer);
@@ -967,11 +1034,10 @@ themeToggle.addEventListener('click', toggleTheme);
 pipBtn.addEventListener('click', togglePiP);
 
 // Bootstrap rendering initialization startup sequences
-initializeWheels();
 setupConfigSelectors();
 updateModeUIContext();
 recoverActiveTimerState(); 
-updateRollingDisplay();
+updateTimerDisplay();
 renderProductivityCharts();
 commitLogToTerminal(null, null, null, true); 
 renderTrophiesUI();

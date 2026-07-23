@@ -4,8 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Lockd In — Focus Workspace</title>
-    <!-- Google Fonts: Russo One for Logo, Space Grotesk for Workspace UI -->
-    <link href="https://fonts.googleapis.com/css2?family=Russo+One&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Google Fonts: Space Grotesk for Workspace UI (Cal Sans loaded via CSS @font-face) -->
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="style.css">
     <!-- html2canvas Library CDN for crisp client-side card generation -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
@@ -48,20 +48,7 @@
                     <span class="inline-task-display" id="inlineTaskDisplay"></span>
                 </div>
                 
-                <!-- Rotating Mechanical Number Counter Frame (HH : MM : SS) -->
-                <div class="timer-display">
-                    <div class="time-col">
-                        <div class="digit-wheel" id="hoursWheel"></div>
-                    </div>
-                    <span class="colon">:</span>
-                    <div class="time-col">
-                        <div class="digit-wheel" id="minsWheel"></div>
-                    </div>
-                    <span class="colon">:</span>
-                    <div class="time-col">
-                        <div class="digit-wheel" id="secsWheel"></div>
-                    </div>
-                </div>
+                <div class="timer-display" id="timerDisplay">00:00:00</div>
 
                 <!-- Interactive Task Input Field -->
                 <div class="task-space-container" id="taskSpaceContainer">
@@ -186,6 +173,7 @@
                         <div class="card-metrics-display" id="cardMetricsDisplay">0.0 hrs</div>
                         <div class="card-badge-container">
                             <div class="card-badge-pill" id="cardTrophyBadge">0 Trophies 🏆</div>
+                            <div class="card-badge-pill card-streak-pill" id="cardStreakBadge">🔥 0 Day Streak</div>
                         </div>
                         <div class="card-quote-footer">
                             Average is the enemy.<br>Lock in. Outwork. Outlast.
@@ -235,6 +223,16 @@
         </section>
 
     </main>
+
+    <div class="custom-modal-overlay" id="customModalOverlay">
+        <div class="custom-modal">
+            <div class="custom-modal-title" id="customModalTitle"></div>
+            <div class="custom-modal-message" id="customModalMessage"></div>
+            <div class="custom-modal-actions" id="customModalActions"></div>
+        </div>
+    </div>
+
+    <div class="toast-container" id="toastContainer"></div>
 
     <script src="app.js"></script>
 </body>

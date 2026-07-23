@@ -14,8 +14,6 @@
 }
 
 /* Specific Overrides for Premium Cal Sans Look */
-.app-logo, 
-.card-logo, 
 .timer-display, 
 .card-metrics-display,
 .custom-modal-title {
@@ -33,11 +31,43 @@
     line-height: 1;
 }
 
-.app-logo { 
-    font-size: 1.4rem; 
-    font-weight: 600; 
-    letter-spacing: 0.04em; 
-    color: var(--text-main); 
+/* --- Logo Logic --- */
+.app-logo {
+    height: 28px; /* Adjust height to fit your design */
+    display: flex;
+    align-items: center;
+}
+
+.app-logo img {
+    height: 100%;
+    width: auto;
+    display: block;
+}
+
+/* Hide black logo by default (Dark Mode) */
+.logo-black {
+    display: none !important;
+}
+
+/* Light Mode Swapping */
+.light-mode .logo-white {
+    display: none !important;
+}
+
+.light-mode .logo-black {
+    display: block !important;
+}
+
+/* --- Profile Card Logo Fix --- */
+.card-logo {
+    margin-bottom: 12px;
+    display: flex;
+    justify-content: center;
+}
+
+/* Ensure the logo is crisp on the exported image */
+.is-exporting .card-logo img {
+    filter: drop-shadow(0 0 2px rgba(0,0,0,0.5));
 }
 
 :root {
@@ -303,68 +333,69 @@ body {
     box-shadow: 0 20px 50px rgba(0, 0, 0, 0.4);
 }
 
+/* 1. Give the logo more space at the top */
 .card-logo {
-    font-family: 'Cal Sans', 'Space Grotesk', sans-serif;
-    font-size: 1.35rem;
-    letter-spacing: 0.06em;
-    color: #ffffff;
-    margin-bottom: 4px;
+    margin-bottom: 16px; 
+    display: flex;
+    justify-content: center;
 }
 
+/* 2. Tighten the sub-labels but separate them from the big numbers */
 .card-timeline-label {
-    font-size: 0.78rem;
+    font-size: 0.75rem;
     font-weight: 500;
-    text-transform: capitalize;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
     color: var(--text-muted);
-    margin-bottom: 8px;
+    margin-bottom: 2px; /* Close to the task name */
 }
 
 .card-active-task {
     font-size: 0.9rem;
-    font-weight: 600;
-    color: var(--accent-color);
-    margin-bottom: 24px;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    opacity: 0.9;
-}
-
-.card-metrics-display {
-    font-size: 4rem;
-    font-weight: 700;
-    letter-spacing: -0.04em;
+    font-weight: 550;
     color: #ffffff;
-    line-height: 1.1;
-    margin-bottom: 16px;
+    margin-bottom: 28px; /* Increased to separate from the big 0.0 hrs */
+    opacity: 0.8;
 }
 
+/* 3. Fix the "Big Numbers" area */
+.card-metrics-display {
+    font-family: 'Cal Sans', sans-serif !important;
+    font-size: 4.5rem; /* Slightly bigger for impact */
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    color: #ffffff;
+    line-height: 1;    /* Tight line height for Cal Sans */
+    margin-bottom: 32px; /* Crucial: Creates space above the badges */
+}
+
+/* 4. Improve badge layout */
 .card-badge-container {
     display: flex;
     justify-content: center;
-    gap: 8px;
+    gap: 12px;         /* More horizontal space between the two capsules */
     flex-wrap: wrap;
-    margin-bottom: 24px;
+    margin-bottom: 36px; /* Space before the footer quote */
 }
 
 .card-badge-pill {
-    display: inline-block;
-    padding: 6px 20px;
+    padding: 8px 18px; /* Slightly taller capsules */
     background: rgba(255, 255, 255, 0.05);
-    border: 1px solid rgba(255, 255, 255, 0.15);
+    border: 1px solid rgba(255, 255, 255, 0.12);
     border-radius: 30px;
     font-size: 0.8rem;
     font-weight: 600;
     color: #ffffff;
-    box-shadow: inset 0 1px 0 rgba(255,255,255,0.1);
+    white-space: nowrap;
 }
 
+/* 5. The Footer Quote */
 .card-quote-footer {
-    font-size: 0.72rem;
-    font-weight: 500;
-    line-height: 1.5;
+    font-size: 0.75rem;
+    line-height: 1.6;
     color: var(--text-muted);
-    letter-spacing: 0.04em;
+    letter-spacing: 0.02em;
+    opacity: 0.6;
 }
 
 /* --- Real-time Visitor Counter Styling --- */

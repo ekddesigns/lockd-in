@@ -6,12 +6,38 @@
     font-display: swap;
 }
 
-/* --- Global Core Variables & Design Resets --- */
 * {
     margin: 0;
     padding: 0;
     box-sizing: border-box;
-    font-family: 'Cal Sans', 'Space Grotesk', sans-serif;
+    font-family: 'Space Grotesk', sans-serif; /* Global UI Font */
+}
+
+/* Specific Overrides for Premium Cal Sans Look */
+.app-logo, 
+.card-logo, 
+.timer-display, 
+.card-metrics-display,
+.custom-modal-title {
+    font-family: 'Cal Sans', sans-serif !important;
+}
+
+.timer-display {
+    font-size: 3.5rem; 
+    font-weight: 600;
+    letter-spacing: -0.02em;
+    margin-bottom: 32px;
+    color: var(--text-main);
+    text-align: center;
+    font-variant-numeric: tabular-nums; /* Prevents numbers from jumping */
+    line-height: 1;
+}
+
+.app-logo { 
+    font-size: 1.4rem; 
+    font-weight: 600; 
+    letter-spacing: 0.04em; 
+    color: var(--text-main); 
 }
 
 :root {

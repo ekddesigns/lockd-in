@@ -507,8 +507,8 @@ async function downloadProfileCardAsJpg() {
         const canvas = await html2canvas(profileCardCanvasFrame, {
             scale: 3, 
             backgroundColor: null, 
-            useCORS: true,       // CRITICAL for Cloudflare
-            allowTaint: false,   // Set to false for better security
+            useCORS: true,
+            allowTaint: false,
             logging: false,
             scrollX: 0,
             scrollY: -window.scrollY, 

@@ -499,38 +499,32 @@ function renderProfileCardData() {
 // --- html2canvas Core Image Generation Downloader Engine ---
 async function downloadProfileCardAsJpg() {
     renderProfileCardData();
-    
-    // 1. Add the exporting class to the frame
     profileCardCanvasFrame.classList.add('is-exporting');
 
     try {
-        // 2. Small delay to allow the browser to switch to the "clean" export look
-        await new Promise(resolve => setTimeout(resolve, 100));
+        await new Promise(resolve => setTimeout(resolve, 150)); // Small wait for fonts to load
 
         const canvas = await html2canvas(profileCardCanvasFrame, {
             scale: 3, 
-            backgroundColor: '#050505', 
+            backgroundColor: null, 
+            useCORS: true,       // CRITICAL for Cloudflare
+            allowTaint: false,   // Set to false for better security
             logging: false,
-            useCORS: true,
-            allowTaint: true,
             scrollX: 0,
             scrollY: -window.scrollY, 
         });
 
-        const imageURL = canvas.toDataURL("image/jpeg", 1.0); 
+        const imageURL = canvas.toDataURL("image/jpeg", 0.95); 
         const virtualAnchor = document.createElement('a');
-        const activeRange = (cardTimelineSelector.value || "focus").toLowerCase();
-        
         virtualAnchor.href = imageURL;
-        virtualAnchor.download = `LockdIn_ProfileCard_${activeRange}.jpg`;
+        virtualAnchor.download = `LockdIn_ProfileCard.jpg`;
         document.body.appendChild(virtualAnchor);
         virtualAnchor.click();
         document.body.removeChild(virtualAnchor);
         
     } catch (err) {
-        console.error("Canvas export rendering failed.", err);
+        console.error("Export failed:", err);
     } finally {
-        // 3. Remove the class so your website looks normal again on screen
         profileCardCanvasFrame.classList.remove('is-exporting');
     }
 }

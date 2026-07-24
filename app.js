@@ -507,11 +507,11 @@ async function downloadProfileCardAsJpg() {
         const canvas = await html2canvas(profileCardCanvasFrame, {
             scale: 3, 
             backgroundColor: null, 
-            useCORS: true,
+            useCORS: true,      // Still required so Cloudflare doesn't block the PNG
             allowTaint: false,
             logging: false,
             scrollX: 0,
-            scrollY: -window.scrollY, 
+            scrollY: -window.scrollY
         });
 
         const imageURL = canvas.toDataURL("image/jpeg", 0.95); 

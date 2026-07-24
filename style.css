@@ -58,16 +58,17 @@
     display: block !important;
 }
 
-/* --- Profile Card Logo Fix --- */
-.card-logo {
-    margin-bottom: 12px;
-    display: flex;
-    justify-content: center;
+.card-logo img {
+    height: 24px; /* Fixed height */
+    width: auto;  /* Let the width scale naturally */
+    display: block;
+    margin: 0 auto;
 }
 
-/* Ensure the logo is crisp on the exported image */
-.is-exporting .card-logo img {
-    filter: drop-shadow(0 0 2px rgba(0,0,0,0.5));
+/* Ensure it stays crisp during export */
+.is-exporting #cardLogoImg {
+    width: 120px !important;
+    height: 24px !important;
 }
 
 :root {
